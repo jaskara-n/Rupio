@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.8;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract CollateralSafekeep is
     AccessControl,
@@ -16,14 +17,16 @@ contract CollateralSafekeep is
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 private lastTimeStamp;
     uint256 private immutable timeInterval;
-    uint256 public currentCollateralBalance;
+    int public currentCollateralBalance;
+
+    using SafeMath for int;
 
     /************STRUCTS******************/
     struct vault {
         uint256 balance;
     }
 
-    /**********MAPPINGS************/
+    /**************MAPPINGS***************/
     mapping(address => vault) public userVaults;
 
     /***************MODIFIERS***********/
@@ -95,14 +98,14 @@ contract CollateralSafekeep is
     3. our keepers subscription should be funded with link
     */
     function checkUpkeep(
-        bytes calldata /*performData*/
+        bytes memory /*performData*/
     ) public override returns (bool upkeepNeeded, bytes memory) {
         bool isTimePassed = (block.timestamp - lastTimeStamp) > timeInterval;
         bool hasBalance = address(this).balance > 0;
         upkeepNeeded = (isTimePassed && hasBalance);
     }
 
-    function performUpkeep(bytes calldata /*performData*/) external override {
+    function performUpkeep(bytes memory /*performData*/) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
             revert upkeepNotNeeded();
@@ -114,7 +117,7 @@ contract CollateralSafekeep is
                 ,
 
             ) = priceFeed.latestRoundData();
-            currentCollateralBalance = (address(this).balance) * (answer); //Returns current collateral balance for the whole system
+            currentCollateralBalance = mul((address(this).balance), (answer)); //Returns current collateral balance for the whole system
         }
     }
 
