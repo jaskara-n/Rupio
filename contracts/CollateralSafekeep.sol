@@ -19,8 +19,6 @@ contract CollateralSafekeep is
     uint256 private immutable timeInterval;
     int public currentCollateralBalance;
 
-    using SafeMath for int;
-
     /************STRUCTS******************/
     struct vault {
         uint256 balance;
@@ -117,7 +115,7 @@ contract CollateralSafekeep is
                 ,
 
             ) = priceFeed.latestRoundData();
-            currentCollateralBalance = mul((address(this).balance), (answer)); //Returns current collateral balance for the whole system
+            currentCollateralBalance = int(address(this).balance) * answer;
         }
     }
 
