@@ -17,7 +17,7 @@ contract CollateralSafekeep is
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 private lastTimeStamp;
     uint256 private immutable timeInterval;
-    uint256 public currentCollateralBalance;
+    int public currentCollateralBalance;
 
     /************STRUCTS******************/
     struct vault {
@@ -115,7 +115,7 @@ contract CollateralSafekeep is
                 ,
 
             ) = priceFeed.latestRoundData();
-            currentCollateralBalance = (address(this).balance) * (answer); //Returns current collateral balance for the whole system
+            currentCollateralBalance = int(address(this).balance) * answer;
         }
     }
 
