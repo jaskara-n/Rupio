@@ -10,7 +10,6 @@ contract Indai is
     Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
-    AccessControlUpgradeable,
     ERC20PermitUpgradeable
 {
     /// @custom:oz-upgrades-unsafe-allow constructor
