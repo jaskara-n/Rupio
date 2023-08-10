@@ -29,6 +29,8 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     vault[] userVaults;
     vault[] internal riskyVaults; //not sure if this array will pile up with each time interval
 
+    /************EVENTS******************/
+
     /**************MAPPINGS***************/
 
     mapping(address => uint256) userIndexes;
@@ -112,7 +114,8 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         require(
             userVaults[userIndexes[msg.sender]].balance >= amount,
             "insufficient balance in vault"
-        ); //To add logic to withdraw amount after cutting the ratio(indai to collateral in vault)
+        ); //To add logic to withdraw amount after cutting the fee
+        //Or to let repay indai+fee(stability fee)
         payable(msg.sender).transfer(amount);
         userVaults[userIndexes[msg.sender]].balance -= amount;
     }
@@ -194,7 +197,9 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /*************MOD ONLY FUNCTIONS*************/
 
-    function liquidateVault(address _vaultAddress) public onlyModerator {}
+    function liquidateVault(address _vaultAddress) public onlyModerator {
+        //liquidate vaults that get too risky
+    }
 
     /*************GETTER FUNCTIONS*************/
 
@@ -244,3 +249,26 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 }
 
 //to implement a new contract for  oracle (kind of for loop)
+
+// If MKR holders govern the Maker Protocol successfully, the Protocol
+// will accrue Surplus Dai as Dai holders pay Stability Fees. On the other
+// hand, if liquidations are inadequate, then the Protocol will accrue Bad
+// Debt. Once this Surplus Dai / Bad Debt amount hits a threshold, as
+// voted by MKR holders, then the Protocol will discharge Surplus Dai /
+// Bad Debt through the Flapper / Flopper smart contract by buying and
+// burning / minting and selling MKR, respectively.
+
+// Risk Premium Rate - This rate is used to calculate the risk premium fee that accrues on debt in a Vault. A
+// unique Risk Premium Rate is assigned to each collateral type. (e.g. 2.5%/year for Collateral A, 3.5%/year for
+// Collateral B, etc)
+
+// Base Rate - This rate is used to calculate the base fee that accrues on debt in a Vault. A system wide Base
+// Rate is assigned to all collateral types. (e.g. 0.5%/year for the Maker Protocol)
+
+// Stability Rate = Risk Premium Rate + Base Rate. This rate is used to calculate the Stability Fee.
+
+// Dai Savings Rate (DSR) - This rate is used to calculate the dai earned that accrues on Dai locked in the
+// savings contract. A system wide Dai Savings Rate is assigned to all Dai locked in the DSR contract. (e.g.
+// 1%/year for DSR)
+
+// Stability fee - a fee that continuously accrues on debt in a Vault (e.g. 2.5% per year)
