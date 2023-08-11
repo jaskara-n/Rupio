@@ -33,7 +33,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /**************MAPPINGS***************/
 
-    mapping(address => uint256) userIndexes;
+    mapping(address => uint256) public userIndexes;
 
     /***************MODIFIERS***********/
     //Checks if user has a vault or not
@@ -73,7 +73,14 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         lastTimeStamp = block.timestamp;
         timeInterval = _timeInterval;
         CIP = _CIP;
-        vaultID == 0;
+        vaultID = 1;
+        vault memory initialVault = vault({
+            indaiIssued: 0,
+            userAddress: address(0),
+            vaultId: 0,
+            balance: 0
+        });
+        userVaults.push(initialVault);
     }
 
     /*************PUBLIC FUNCTIONS************/
@@ -86,15 +93,17 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         grantRole(MODERATOR_ROLE, account);
     }
 
+    function geX() public view returns (uint256) {
+        return userIndexes[msg.sender];
+    }
+
     //Create a new vault for a user
     function createVault() public payable {
-        /* if (userVaults.length > 0) {
             require(
-                userVaults[userIndexes[msg.sender]].balance == 0, // only one vault allowed for one address
-                "you already have a vault"
+                userIndexes[msg.sender] == 0, // Only one vault allowed for one address
+                "You already have a vault"
             );
-        } */
-        require(msg.value > 0, "eth amount must be greater than 0");
+        require(msg.value > 0, "ETH amount must be greater than 0");
 
         vault memory newVault = vault({
             vaultId: vaultID,
@@ -103,12 +112,12 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
             indaiIssued: 0
         });
         /* 
-        newVault.balance = msg.value;
+            newVault.balance = msg.value;
 
-        newVault.userAddress = msg.sender;
+            newVault.userAddress = msg.sender;
 
-        newVault.vaultId = vaultID;
- */
+            newVault.vaultId = vaultID;
+    */
         userVaults.push(newVault);
         userIndexes[msg.sender] = vaultID;
         vaultID = vaultID + 1;
@@ -131,13 +140,13 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     /*Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep 
-    function to get price feed for vaults at regular intervals of time*/
+        function to get price feed for vaults at regular intervals of time*/
     /*
-    conditions for upkeepNeeded to be true:
-    1. time interval has to be passed
-    2. there should be atleast someone deposited some eth into the vault
-    3. our keepers subscription should be funded with link
-    */
+        conditions for upkeepNeeded to be true:
+        1. time interval has to be passed
+        2. there should be atleast someone deposited some eth into the vault
+        3. our keepers subscription should be funded with link
+        */
     function checkUpkeep(
         bytes memory /*performData*/
     ) public view override returns (bool upkeepNeeded, bytes memory) {
