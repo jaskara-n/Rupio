@@ -16,7 +16,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     uint256 public immutable CIP; //Indai to collateral ratio
     uint256 private UservaultArrayLength;
     uint256 internal vaultID;
-    int internal currentCollateralBalance; // total collateral balance of the whole contract in inr
+    int256 internal currentCollateralBalance; // total collateral balance of the whole contract in inr
 
     /************STRUCTS******************/
     struct vault {
@@ -33,7 +33,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /**************MAPPINGS***************/
 
-    mapping(address => uint256) userIndexes;
+    mapping(address => uint256) public userIndexes;
 
     /***************MODIFIERS***********/
     //Checks if user has a vault or not
@@ -73,7 +73,14 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         lastTimeStamp = block.timestamp;
         timeInterval = _timeInterval;
         CIP = _CIP;
-        vaultID == 0;
+        vaultID = 1;
+        vault memory initialVault = vault({
+            indaiIssued: 0,
+            userAddress: address(0),
+            vaultId: 0,
+            balance: 0
+        });
+        userVaults.push(initialVault);
     }
 
     /*************PUBLIC FUNCTIONS************/
@@ -86,22 +93,34 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         grantRole(MODERATOR_ROLE, account);
     }
 
+    function geX() public view returns (uint256) {
+        return userIndexes[msg.sender];
+    }
+
     //Create a new vault for a user
     function createVault() public payable {
-        require(
-            userVaults[userIndexes[msg.sender]].balance == 0, // only one vault allowed for one address
-            "you already have a vault"
-        );
+            require(
+                userIndexes[msg.sender] == 0, // Only one vault allowed for one address
+                "You already have a vault"
+            );
+        require(msg.value > 0, "ETH amount must be greater than 0");
 
-        require(msg.value > 0, "eth amount must be greater than 0");
+        vault memory newVault = vault({
+            vaultId: vaultID,
+            userAddress: msg.sender,
+            balance: msg.value,
+            indaiIssued: 0
+        });
+        /* 
+            newVault.balance = msg.value;
 
-        userVaults[userIndexes[msg.sender]].balance == msg.value;
+            newVault.userAddress = msg.sender;
 
-        userVaults[userIndexes[msg.sender]].userAddress == msg.sender;
-
-        userVaults[userIndexes[msg.sender]].vaultId == vaultID;
-
-        vaultID == vaultID + 1;
+            newVault.vaultId = vaultID;
+    */
+        userVaults.push(newVault);
+        userIndexes[msg.sender] = vaultID;
+        vaultID = vaultID + 1;
     }
 
     function updateVault() public payable vaultOrNot {
@@ -121,13 +140,13 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     /*Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep 
-    function to get price feed for vaults at regular intervals of time*/
+        function to get price feed for vaults at regular intervals of time*/
     /*
-    conditions for upkeepNeeded to be true:
-    1. time interval has to be passed
-    2. there should be atleast someone deposited some eth into the vault
-    3. our keepers subscription should be funded with link
-    */
+        conditions for upkeepNeeded to be true:
+        1. time interval has to be passed
+        2. there should be atleast someone deposited some eth into the vault
+        3. our keepers subscription should be funded with link
+        */
     function checkUpkeep(
         bytes memory /*performData*/
     ) public view override returns (bool upkeepNeeded, bytes memory) {
@@ -136,14 +155,17 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         upkeepNeeded = (isTimePassed && hasBalance);
     }
 
-    function performUpkeep(bytes memory /*performData*/) external override {
+    function performUpkeep(
+        bytes memory /*performData*/
+    ) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
             revert upkeepNotNeeded();
         } else {
             (
                 ,
-                /* uint80 roundID */ int answer1 /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+                /* uint80 roundID */
+                int256 answer1, /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/
                 ,
                 ,
 
@@ -151,14 +173,15 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
             (
                 ,
-                /* uint80 roundID */ int answer2 /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+                /* uint80 roundID */
+                int256 answer2, /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/
                 ,
                 ,
 
             ) = priceFeed_INRtoUSD.latestRoundData();
 
             currentCollateralBalance =
-                (int(address(this).balance) * answer1) /
+                (int256(address(this).balance) * answer1) /
                 (answer2);
 
             //function to scan each user vault for ratio (returned my enternal oracle)
@@ -167,9 +190,11 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     // Function to check if collateral to indai ratio is satisfied for a user
-    function isCollateralRatioSatisfied(
-        address _user
-    ) internal view returns (bool) {
+    function isCollateralRatioSatisfied(address _user)
+        internal
+        view
+        returns (bool)
+    {
         uint256 collateral = userVaults[userIndexes[_user]].balance;
         uint256 indaiIssued = userVaults[userIndexes[_user]].indaiIssued;
         uint256 requiredCollateral = (indaiIssued * CIP) / 100; // 150 percent of indai issued
@@ -214,9 +239,12 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     /*************MOD ONLY GETTER FUNCTIONS*************/
-    function getUserCollateralBalance(
-        address _address
-    ) public view onlyModerator returns (uint256) {
+    function getUserCollateralBalance(address _address)
+        public
+        view
+        onlyModerator
+        returns (uint256)
+    {
         return userVaults[userIndexes[_address]].balance;
     }
 
@@ -241,9 +269,12 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     //is collateral ratio satified for a specific user
-    function isCollateralRatioSatifiedForUser(
-        address _user
-    ) public view onlyModerator returns (bool) {
+    function isCollateralRatioSatifiedForUser(address _user)
+        public
+        view
+        onlyModerator
+        returns (bool)
+    {
         isCollateralRatioSatisfied(_user);
     }
 }
