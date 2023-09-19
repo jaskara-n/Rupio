@@ -200,14 +200,14 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         return collateral >= requiredCollateral;
     }
 
-    function scanVaults() internal returns (uint256) {
+    function scanVaults() internal {
         uint256 userVaultArrayLength = userVaults.length;
 
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
             bool yesOrNo = isCollateralRatioSatisfied(
                 userVaults[i].userAddress
             );
-            if (yesOrNo = false) {
+            if (yesOrNo == false) {
                 vault memory riskyVault = vault(
                     i,
                     userVaults[i].userAddress,
@@ -288,7 +288,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     function isCollateralRatioSatifiedForUser(
         address _user
     ) public view onlyModerator returns (bool) {
-        isCollateralRatioSatisfied(_user);
+        return isCollateralRatioSatisfied(_user);
     }
 }
 
