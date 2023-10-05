@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
+///@title Indai algorithmic stablecoin
+///@author Jaskaran Singh
+///@notice 
+///@dev 
+
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
@@ -25,6 +30,8 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         address userAddress;
         uint256 balance;
         uint256 indaiIssued;
+        uint256 debt;
+        uint256 vaultHealth;
     }
 
     /**************ARRAYS***************/
@@ -43,7 +50,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     modifier yesVault() {
         require(
             userIndexes[msg.sender] == 1,
-            "You dont have a vault, create a vault first!"
+            "You dont have a Vault, create a vault first!"
         );
         _;
     }
@@ -94,7 +101,9 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
             indaiIssued: 0,
             userAddress: address(0),
             vaultId: 0,
-            balance: 0
+            balance: 0,
+            debt: 0,
+            vaultHealth: 0
         });
         userVaults.push(initialVault);
     }
@@ -119,6 +128,8 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         newVault.userAddress = msg.sender;
         newVault.vaultId = vault_ID;
         newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
+        newVault.debt = 0;
+        newVault.vaultHealth = 100; //Full health for new vault
 
         userVaults.push(newVault);
         userIndexes[msg.sender] = vault_ID;
@@ -131,12 +142,16 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     function withdrawFromVault(uint256 amount) public payable yesVault {
-        // only allow user to withdraw if no debt in vault
         require(amount > 0, "Withdraw amount should be greater than 0");
         require(
             userVaults[userIndexes[msg.sender]].balance >= amount,
             "insufficient balance in vault"
-        ); //To add logic to withdraw amount after cutting the fee
+        );
+        require(
+            isCollateralRatioSatifiedForUser(msg.sender) == true,
+            "Clear your debt in the vault!"
+        ); // only allow user to withdraw if no debt in vault
+        //To add logic to withdraw amount after cutting the fee
         //Or to let repay indai+fee(stability fee)
         payable(msg.sender).transfer(amount);
         userVaults[userIndexes[msg.sender]].balance -= amount;
@@ -187,6 +202,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
             //function to scan each user vault for ratio (returned my enternal oracle)
             scanVaults();
+            updateDebtInArray();
         }
     }
 
@@ -200,24 +216,28 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         return collateral >= requiredCollateral;
     }
 
-    function scanVaults() internal {
+    function scanVaults() internal returns (uint256) {
         uint256 userVaultArrayLength = userVaults.length;
 
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
             bool yesOrNo = isCollateralRatioSatisfied(
                 userVaults[i].userAddress
             );
-            if (yesOrNo == false) {
+            if (yesOrNo = false) {
                 vault memory riskyVault = vault(
                     i,
                     userVaults[i].userAddress,
                     userVaults[i].balance,
-                    userVaults[i].indaiIssued
+                    userVaults[i].indaiIssued,
+                    userVaults[i].debt,
+                    userVaults[i].vaultHealth
                 );
                 riskyVaults.push(riskyVault);
             }
         }
     }
+
+    function updateDebtInArray() internal {}
 
     /*************MOD ONLY FUNCTIONS*************/
 
@@ -225,14 +245,20 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         //liquidate vaults that get too risky
     }
 
+    function calculateDebtForUser(
+        address _vaultAddress
+    ) public onlyModerator returns (uint256) {}
+
     /*************GETTER FUNCTIONS*************/
 
     function getCIP()
         public
         view
-        //returns collateral to indai percentage
-        onlyModerator
-        returns (uint256)
+        returns (
+            //returns collateral to indai percentage
+
+            uint256
+        )
     {
         return CIP;
     }
@@ -248,6 +274,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         tempVault.userAddress = msg.sender;
         tempVault.balance = userVaults[userIndexes[msg.sender]].balance;
         tempVault.indaiIssued = userVaults[userIndexes[msg.sender]].indaiIssued;
+        tempVault.debt = userVaults[userIndexes[msg.sender]].debt;
         return tempVault;
     }
 
@@ -288,7 +315,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     function isCollateralRatioSatifiedForUser(
         address _user
     ) public view onlyModerator returns (bool) {
-        return isCollateralRatioSatisfied(_user);
+        isCollateralRatioSatisfied(_user);
     }
 }
 
