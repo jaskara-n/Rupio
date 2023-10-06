@@ -3,8 +3,8 @@ pragma solidity ^0.8.8;
 
 ///@title Indai algorithmic stablecoin
 ///@author Jaskaran Singh
-///@notice 
-///@dev 
+///@notice
+///@dev
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
