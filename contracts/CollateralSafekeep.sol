@@ -30,17 +30,21 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         address userAddress;
         uint256 balance;
         uint256 indaiIssued;
-        uint256 debt;
         uint256 vaultHealth;
     }
 
     /**************ARRAYS***************/
     vault[] internal userVaults;
-    vault[] internal riskyVaults; //not sure if this array will pile up with each time interval
+    
 
     /************EVENTS******************/
+    event thisIsARiskyVault(uint256 vaultId,
+        address userAddress,
+        uint256 balance,
+        uint256 indaiIssued,
+        uint256 vaultHealth);
 
-    /**************MAPPINGS***************/
+
 
     mapping(address => uint256) public userIndexes;
 
@@ -75,6 +79,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /***************ERRORS***********/
     error upkeepNotNeeded();
+    
 
     /***************EVENTS***********/
 
@@ -102,7 +107,6 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
             userAddress: address(0),
             vaultId: 0,
             balance: 0,
-            debt: 0,
             vaultHealth: 0
         });
         userVaults.push(initialVault);
@@ -128,7 +132,6 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         newVault.userAddress = msg.sender;
         newVault.vaultId = vault_ID;
         newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
-        newVault.debt = 0;
         newVault.vaultHealth = 100; //Full health for new vault
 
         userVaults.push(newVault);
@@ -136,10 +139,24 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         vault_ID = vault_ID + 1;
     }
 
+    function mintIndai( uint256 amount)public yesVault{
+        
+    } 
+
+     /**
+        @notice This allows user to mint indai based on their collateral in the vault
+        @notice User cannot mint if vault health is lower than 150 percent
+        @notice One indai is issued for every ruppee of collateral(in eth, converted to inr)
+    */    
+
     function updateVault() public payable yesVault {
         require(msg.value > 0, "eth amount must be greater than 0");
         userVaults[userIndexes[msg.sender]].balance += msg.value;
     }
+
+    /**
+        @notice This adds nore collateral to the user's existing vault
+    */
 
     function withdrawFromVault(uint256 amount) public payable yesVault {
         require(amount > 0, "Withdraw amount should be greater than 0");
@@ -148,14 +165,17 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
             "insufficient balance in vault"
         );
         require(
-            isCollateralRatioSatifiedForUser(msg.sender) == true,
+            checkVaultHealthForUser(msg.sender) == true,
             "Clear your debt in the vault!"
-        ); // only allow user to withdraw if no debt in vault
-        //To add logic to withdraw amount after cutting the fee
-        //Or to let repay indai+fee(stability fee)
+        ); 
         payable(msg.sender).transfer(amount);
         userVaults[userIndexes[msg.sender]].balance -= amount;
     }
+
+    /*
+        @notice User can withdraw if any excess collateral than 150 percent of indai issued
+        @dev only allow user to withdraw if no debt in vault    
+    **/
 
     /*Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep 
         function to get price feed for vaults at regular intervals of time*/
@@ -202,52 +222,71 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
             //function to scan each user vault for ratio (returned my enternal oracle)
             scanVaults();
-            updateDebtInArray();
+            
         }
     }
 
-    // Function to check if collateral to indai ratio is satisfied for a user
-    function isCollateralRatioSatisfied(
+
+    function checkVaultHealth(
         address _user
-    ) internal view returns (bool) {
+    ) internal  returns (bool) {
         uint256 collateral = userVaults[userIndexes[_user]].balance;
         uint256 indaiIssued = userVaults[userIndexes[_user]].indaiIssued;
-        uint256 requiredCollateral = (indaiIssued * CIP) / 100; // 150 percent of indai issued
-        return collateral >= requiredCollateral;
+        uint256 vaultHealth = (collateral/indaiIssued) * 100;
+        userVaults[userIndexes[_user]].vaultHealth = vaultHealth;
+        return vaultHealth > 150;
+
     }
+
+    /**
+        @notice This checks if collateral to indai ratio is satisfied or not and updates the user's vault health
+        @dev Vault health in the array of user data is updated in this function
+        @return bool
+    */
 
     function scanVaults() internal returns (uint256) {
         uint256 userVaultArrayLength = userVaults.length;
-
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
-            bool yesOrNo = isCollateralRatioSatisfied(
+            bool yesOrNo = checkVaultHealth(
                 userVaults[i].userAddress
             );
             if (yesOrNo = false) {
-                vault memory riskyVault = vault(
-                    i,
+
+                liquidateVault(userVaults[i].userAddress);
+
+                emit thisIsARiskyVault(                                        i,
                     userVaults[i].userAddress,
                     userVaults[i].balance,
                     userVaults[i].indaiIssued,
-                    userVaults[i].debt,
                     userVaults[i].vaultHealth
                 );
-                riskyVaults.push(riskyVault);
+                
             }
         }
+
+        
     }
 
-    function updateDebtInArray() internal {}
+    /*
+        @notice This function liquidates vaults that get too risky
+        @dev stores the risky vaults 
+    **/
+
+    
 
     /*************MOD ONLY FUNCTIONS*************/
 
     function liquidateVault(address _vaultAddress) public onlyModerator {
-        //liquidate vaults that get too risky
+        
     }
 
-    function calculateDebtForUser(
-        address _vaultAddress
-    ) public onlyModerator returns (uint256) {}
+    /** @notice liquidates vaults that get too risky.
+        @dev this function is public in case we need to manually liquidate a vault
+        @return 
+    */
+        
+
+
 
     /*************GETTER FUNCTIONS*************/
 
@@ -274,7 +313,6 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         tempVault.userAddress = msg.sender;
         tempVault.balance = userVaults[userIndexes[msg.sender]].balance;
         tempVault.indaiIssued = userVaults[userIndexes[msg.sender]].indaiIssued;
-        tempVault.debt = userVaults[userIndexes[msg.sender]].debt;
         return tempVault;
     }
 
@@ -311,13 +349,18 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         return userVaults;
     }
 
-    //is collateral ratio satified for a specific user
-    function isCollateralRatioSatifiedForUser(
+
+    function checkVaultHealthForUser(
         address _user
-    ) public view onlyModerator returns (bool) {
-        isCollateralRatioSatisfied(_user);
+    ) public  view onlyModerator returns (bool) {
+        return userVaults[userIndexes[_user]].vaultHealth > 150 ;
     }
 }
+
+/*
+    @notice This function checks if collateral to indai percentage is satisfied for a given user
+    @return bool    
+**/
 
 //to implement a new contract for  oracle (kind of for loop)
 
@@ -332,5 +375,8 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 // Risk Premium Rate - This rate is used to calculate the risk premium fee that accrues on debt in a Vault. A
 // unique Risk Premium Rate is assigned to each collateral type. (e.g. 2.5%/year for Collateral A, 3.5%/year for
 // Collateral B, etc)
+
+//To add logic to withdraw amount after cutting the fee
+//Or to let repay indai+fee(stability fee)
 
 /** */
