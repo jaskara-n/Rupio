@@ -41,7 +41,7 @@ interface Indai {
 }
 
 ///@title Indai algorithmic stablecoin
-///@author Jaskaran Singh
+///@author Jaskaran Singh 
 ///@notice
 ///@dev
 
@@ -53,6 +53,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     /*************VARIABLES****************/
     AggregatorV3Interface internal priceFeed_ETHtoUSD;
     AggregatorV3Interface internal priceFeed_INRtoUSD;
+     Indai internal token; //For ERC20 functions of the system
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 private lastTimeStamp;
@@ -62,7 +63,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     uint256 public immutable riskPremiumRate; //Currently only for ethereum, the rate associated with debt in a vault, with increasing time
     uint256 internal vault_ID;
     int256 internal currentCollateralBalance; // total collateral balance of the whole contract in inr
-    Indai internal token; //For ERC20 functions of the system
+   
 
     /************STRUCTS******************/
     struct vault {
@@ -186,6 +187,10 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         vault_ID = vault_ID + 1;
     }
 
+    /**
+        @notice creates a new vault for a user
+    */
+
     function mintIndai(uint256 amount) public yesVault {
         require(amount > 0, "enter valid amount");
         require(
@@ -235,19 +240,13 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         userVaults[userIndexes[msg.sender]].balance -= amount;
     }
 
-    /*
+    /**
         @notice User can withdraw if any excess collateral than 150 percent of indai issued
         @dev only allow user to withdraw if no debt in vault    
-    **/
+    */
 
-    /*Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep 
-        function to get price feed for vaults at regular intervals of time*/
-    /*
-        conditions for upkeepNeeded to be true:
-        1. time interval has to be passed
-        2. there should be atleast someone deposited some eth into the vault
-        3. our keepers subscription should be funded with link
-        */
+    function burnIndai()public yesVault {}
+
     function checkUpkeep(
         bytes memory /*performData*/
     ) public view override returns (bool upkeepNeeded, bytes memory) {
@@ -255,6 +254,14 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         bool hasBalance = address(this).balance > 0;
         upkeepNeeded = (isTimePassed && hasBalance);
     }
+
+    /**
+        @notice Chainlink function that checks if time interval has passed so that contract can perform the perform upkeep function
+        @dev conditions for upkeepNeeded to be true:
+        1. time interval has to be passed
+        2. there should be atleast someone deposited some eth into the vault
+        3. our keepers subscription should be funded with link
+    */
 
     function performUpkeep(
         bytes memory /*performData*/
@@ -285,10 +292,17 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
                 (int256(address(this).balance) * answer1) /
                 (answer2);
 
-            //function to scan each user vault for ratio (returned my enternal oracle)
+            //function to scan each user vault for ratio (returned by enternal oracle)
             scanVaults();
         }
     }
+
+    /**
+        @notice This function runs periodically and scans through every vault to check vault health.
+        @dev Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep 
+        function to get price feed for vaults at regular intervals of time, and liquidated vaults.
+        @dev Calls scanVaults() directly and other functions indirectly.
+    */
 
     function checkVaultHealth(address _user) internal returns (bool) {
         uint256 collateral = userVaults[userIndexes[_user]].balance;
@@ -303,7 +317,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         @dev Vault health in the array of user data is updated in this function 
     */
 
-    function scanVaults() internal {
+    function scanVaults() internal  {
         uint256 userVaultArrayLength = userVaults.length;
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
             userVaults[i].balanceInINR = userBalanceInInr(
@@ -444,9 +458,9 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     /**
-@notice calculated max amount of dai that can be minted by user at given vault state
-@return uint256 type max mintable dai
-*/
+        @notice calculated max amount of dai that can be minted by user at given vault state
+        @return uint256 type max mintable dai
+    */
 
     function getUserCollateralBalance(address _address)
         public
@@ -458,7 +472,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     /**
-        @notice Returns the user's balance in eth
+        @return Returns the user's balance in eth
     */
 
     function currentVaultID() public view onlyModerator returns (uint256) {
@@ -498,12 +512,14 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     {
         return userVaults[userIndexes[_user]].vaultHealth > CIP;
     }
-}
 
-/*
+    /*
     @notice This function checks if collateral to indai percentage is satisfied for a given user
     @return bool    
-**/
+    **/
+}
+
+
 
 //to implement a new contract for  oracle (kind of for loop)
 
