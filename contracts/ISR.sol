@@ -10,6 +10,8 @@ contract ISR {
         bool isUserWithdrawn;
         uint rewardAmount;
         uint lastWithdrawnAmount;
+        uint lastClaimedReward;
+        uint currentRewardAmount;
         uint lastRewardClaimedAt;
     }
 
@@ -50,7 +52,17 @@ contract ISR {
             indaiToken.allowance(msg.sender, address(this)) >= _amount,
             "Not sufficient allowance"
         );
-        User memory user = User(_amount, block.timestamp, 0, false, 0, 0, 0);
+        User memory user = User(
+            _amount,
+            block.timestamp,
+            0,
+            false,
+            0,
+            0,
+            0,
+            0,
+            0
+        );
         totalDeposited += _amount;
         totalInvestersCount++;
         users[msg.sender] = user;
@@ -75,9 +87,22 @@ contract ISR {
         indaiToken.transfer(msg.sender, _amount);
     }
 
-    function calculateInterest(address _user) internal returns (uint) {}
+    function calculateInterest(address user) internal returns (uint) {
+        User memory currentUser = users[user];
+        uint duration = (block.timestamp - currentUser.userDepositedAt) / 86400;
+        uint value = (currentUser.userBalance * savingsRate * duration) / 100;
+        currentUser.rewardAmount = value / 365;
+        return currentUser.rewardAmount;
+    }
 
-    function claimInterest() public {}
+    function claimReward() public {
+        User memory user = users[msg.sender];
 
-    function claimReward() public {}
+        calculateInterest(msg.sender);
+        user.userCurrentReward = user.rewardAmount - user.lastClaimedReward;
+        user.lastClaimedReward = user.userCurrentReward;
+        user.rewardClaimedAt = block.timestamp;
+        users[msg.sender] = user;
+        indaiToken.mint(msg.sender, user.userCurrentReward);
+    }
 }
