@@ -1,14 +1,19 @@
-const { deployments, getNamedAccounts } = require("hardhat");
+const { deployments, getNamedAccounts, deploy } = require("hardhat");
 
 const deployFunc = async function (hre) {
+  console.log("deploying...");
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  await deploy("priceConverter", {
+  const tx = await deploy("PriceFeed", {
     from: deployer,
     args: [],
     log: true,
   });
+  console.log("mumbai deployment address is : ");
+  console.log(tx.address);
 };
 
-module.exports = { deployFunc };
-func.tags = ["priceConverter"];
+deployFunc();
+
+module.exports = deployFunc;
+deployFunc.tags = ["priceFeed"];
