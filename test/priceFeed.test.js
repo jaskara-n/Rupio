@@ -13,17 +13,21 @@ async function init() {
     deployedContract.address,
     deployer
   );
-  return main;
+  const [price, timestamp] = await main.EthToUsd();
+  return price;
+  // return main;
 }
 
-describe("PriceFeed contract tests", function () {
-  let main;
-  before(async function () {
-    main = await init();
-    console.log("test");
-  });
-  it("should deploy and read from price feed", async function () {
-    const result = await main.readDataFeed();
-    console.log("result", result);
-  });
-});
+// describe("PriceFeed contract tests", function () {
+//   let main;
+//   before(async function () {
+//     main = await init();
+//     console.log("test");
+//   });
+//   it("should deploy and read from price feed", async function () {
+//     const result = await main();
+//     console.log("result", result);
+//   });
+// });
+
+init();

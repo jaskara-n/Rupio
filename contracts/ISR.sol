@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-import "./indai.sol";
+import "./Indai.sol";
 
 contract ISR {
     Indai public indaiToken;

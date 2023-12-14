@@ -1,7 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("dotenv").config();
-require("ethers");
-require("@nomiclabs/hardhat-ethers");
+// require("@nomiclabs/hardhat-ethers");
 require("hardhat-deploy");
 require("hardhat-deploy-ethers");
 
@@ -19,6 +18,7 @@ module.exports = {
     mumbai: {
       url: MUMBAI_RPC_URL,
       accounts: [PRIVATE_KEY],
+      saveDeployments: true,
       chainId: 80001,
     },
   },
