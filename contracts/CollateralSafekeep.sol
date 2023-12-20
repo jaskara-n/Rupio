@@ -140,8 +140,8 @@ contract CollateralSafekeep is AccessControl {
         address _indai,
         address _priceContract
     ) {
-        _setupRole(ADMIN_ROLE, msg.sender); // Grant ADMIN_ROLE to the contract deployer
-        _setupRole(MODERATOR_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender); // Grant ADMIN_ROLE to the contract deployer
+        _grantRole(MODERATOR_ROLE, msg.sender);
         token = i_Indai(_indai);
         priceContract = IPriceFeed(_priceContract);
         lastTimeStamp = block.timestamp;
