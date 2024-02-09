@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-import "./indai.sol";
+import "./Indai.sol";
 
 contract ISR {
     struct User {
@@ -99,10 +99,10 @@ contract ISR {
         User memory user = users[msg.sender];
 
         calculateInterest(msg.sender);
-        user.userCurrentReward = user.rewardAmount - user.lastClaimedReward;
-        user.lastClaimedReward = user.userCurrentReward;
-        user.rewardClaimedAt = block.timestamp;
+        user.currentRewardAmount = user.rewardAmount - user.lastClaimedReward;
+        user.lastClaimedReward = user.currentRewardAmount;
+        user.lastRewardClaimedAt = block.timestamp;
         users[msg.sender] = user;
-        indaiToken.mint(msg.sender, user.userCurrentReward);
+        indaiToken.mint(msg.sender, user.currentRewardAmount);
     }
 }

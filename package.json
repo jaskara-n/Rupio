@@ -4,16 +4,29 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "hardhat test",
+    "test:specific": "hardhat test test/collateralSafekeep.test.js",
+    "deploy": "concurrently \"yarn hardhat run deploy/00_indai.js\" \"yarn hardhat run deploy/01_priceFeed.js\" \"yarn hardhat run deploy/02_collateralSafekeep.js\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "hardhat": "^2.17.0"
+    "@types/sinon-chai": "^3.2.3",
+    "ethereum-waffle": "^4.0.10"
   },
   "dependencies": {
+    "@api3/contracts": "^0.12.0",
     "@chainlink/contracts": "^0.6.1",
-    "@openzeppelin/contracts": "^4.9.3"
+    "@nomicfoundation/hardhat-ethers": "^3.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/contracts": "^4.9.3",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.9.0",
+    "hardhat": "^2.19.2",
+    "hardhat-deploy": "^0.11.44",
+    "hardhat-deploy-ethers": "^0.4.1",
+    "mocha": "^10.2.0"
   }
 }
