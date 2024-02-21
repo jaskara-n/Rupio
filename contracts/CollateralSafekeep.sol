@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
-interface Indai {
+/**************Interfaces***************/
+interface i_Indai {
     function totalSupply() external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
 
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function approve(address spender, uint256 amount) external returns (bool);
 
@@ -40,30 +42,35 @@ interface Indai {
     ) external;
 }
 
+interface IPriceFeed {
+    function EthToUsd() external view returns (uint256, uint256);
+
+    function InrToUsd() external view returns (uint256, uint256);
+}
+
 ///@title Indai algorithmic stablecoin
-///@author Jaskaran Singh 
+///@author Jaskaran Singh
 ///@notice
 ///@dev
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
-contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
+// import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+
+contract CollateralSafekeep is AccessControl {
     /*************VARIABLES****************/
-    AggregatorV3Interface internal priceFeed_ETHtoUSD;
-    AggregatorV3Interface internal priceFeed_INRtoUSD;
-     Indai internal token; //For ERC20 functions of the system
+
+    i_Indai internal token; //For ERC20 functions of the system
+    IPriceFeed internal priceContract;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 private lastTimeStamp;
-    uint256 private immutable timeInterval;
+    // uint256 private immutable timeInterval;
     uint256 public immutable CIP; //Indai to collateral ratio
     uint256 public immutable baseRiskRate; //Base rate debt on a vault
     uint256 public immutable riskPremiumRate; //Currently only for ethereum, the rate associated with debt in a vault, with increasing time
     uint256 internal vault_ID;
     int256 internal currentCollateralBalance; // total collateral balance of the whole contract in inr
-   
 
     /************STRUCTS******************/
     struct vault {
@@ -126,22 +133,19 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     /***************EVENTS***********/
 
     constructor(
-        uint256 _timeInterval,
+        // uint256 _timeInterval,
         uint256 _CIP,
         uint256 _baseRiskRate,
         uint256 _riskPremiumRate,
-        address _indai
+        address _indai,
+        address _priceContract
     ) {
-        _setupRole(ADMIN_ROLE, msg.sender); // Grant ADMIN_ROLE to the contract deployer
-        priceFeed_ETHtoUSD = AggregatorV3Interface(
-            0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 //ETH to USD price feed(for eth mainnet)
-        );
-        priceFeed_INRtoUSD = AggregatorV3Interface(
-            0x605D5c2fBCeDb217D7987FC0951B5753069bC360 //INR to USD price feed(for eth mainnet)
-        );
-        token = Indai(_indai);
+        _grantRole(ADMIN_ROLE, msg.sender); // Grant ADMIN_ROLE to the contract deployer
+        _grantRole(MODERATOR_ROLE, msg.sender);
+        token = i_Indai(_indai);
+        priceContract = IPriceFeed(_priceContract);
         lastTimeStamp = block.timestamp;
-        timeInterval = _timeInterval;
+        /* timeInterval= timeInterval;*/
         CIP = _CIP;
         baseRiskRate = _baseRiskRate;
         riskPremiumRate = _riskPremiumRate;
@@ -159,29 +163,20 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /*************PUBLIC FUNCTIONS************/
 
-    function grantModeratorRole(address account) public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            "Must have ADMIN_ROLE to grant MODERATOR_ROLE"
-        );
+    function grantModeratorRole(address account) public onlyModerator {
         grantRole(MODERATOR_ROLE, account);
     }
 
     //Create a new vault for a user
     function createVault() public payable noVault {
         require(msg.value > 0, "ETH amount must be greater than 0");
-
         vault memory newVault;
-
         newVault.balance = msg.value;
-
         newVault.userAddress = msg.sender;
         newVault.vaultId = vault_ID;
         newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
         newVault.vaultHealth = 100; //Full health for new vault
-
         newVault.balanceInINR = userBalanceInInr(msg.sender);
-
         userVaults.push(newVault);
         userIndexes[msg.sender] = vault_ID;
         vault_ID = vault_ID + 1;
@@ -231,12 +226,15 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
             "insufficient balance in vault"
         );
         require(
-            checkVaultHealthForUser(msg.sender) == true,
+            liquidationCondition(msg.sender) == true,
             "Clear your debt in the vault!"
         );
         uint256 max = calculateMaxWithdrawableCollateral(msg.sender);
         require(amount < max, "you will go into debt!");
         payable(msg.sender).transfer(amount);
+        userVaults[userIndexes[msg.sender]].vaultHealth = calculateVaultHealth(
+            msg.sender
+        );
         userVaults[userIndexes[msg.sender]].balance -= amount;
     }
 
@@ -245,86 +243,112 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         @dev only allow user to withdraw if no debt in vault    
     */
 
-    function burnIndai()public yesVault {}
-
-    function checkUpkeep(
-        bytes memory /*performData*/
-    ) public view override returns (bool upkeepNeeded, bytes memory) {
-        bool isTimePassed = (block.timestamp - lastTimeStamp) > timeInterval;
-        bool hasBalance = address(this).balance > 0;
-        upkeepNeeded = (isTimePassed && hasBalance);
+    function burnIndaiAndRelieveCollateral(uint256 amount) public yesVault {
+        require(userVaults[userIndexes[msg.sender]].indaiIssued > 0);
+        require(userVaults[userIndexes[msg.sender]].indaiIssued >= amount);
+        token.burnFrom(msg.sender, amount);
+        userVaults[userIndexes[msg.sender]].indaiIssued -= amount;
+        userVaults[userIndexes[msg.sender]].balanceInINR += amount;
+        calculateVaultHealth(msg.sender);
     }
 
     /**
-        @notice Chainlink function that checks if time interval has passed so that contract can perform the perform upkeep function
-        @dev conditions for upkeepNeeded to be true:
-        1. time interval has to be passed
-        2. there should be atleast someone deposited some eth into the vault
-        3. our keepers subscription should be funded with link
+        @notice User can burn their indai tokens to repay their debt 
+        @dev only allow user to withdraw if no debt in vault    
     */
 
-    function performUpkeep(
-        bytes memory /*performData*/
-    ) external override {
-        (bool upkeepNeeded, ) = checkUpkeep("");
-        if (!upkeepNeeded) {
-            revert upkeepNotNeeded();
-        } else {
-            (
-                ,
-                /* uint80 roundID */
-                int256 answer1, /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/
-                ,
-                ,
+    // function checkUpkeep(
+    //     bytes memory /*performData*/
+    // ) public view override returns (bool upkeepNeeded, bytes memory) {
+    //     bool isTimePassed = (block.timestamp - lastTimeStamp) > timeInterval;
+    //     bool hasBalance = address(this).balance > 0;
+    //     upkeepNeeded = (isTimePassed && hasBalance);
+    // }
 
-            ) = priceFeed_ETHtoUSD.latestRoundData();
+    // /**
+    //     @notice Chainlink function that checks if time interval has passed so that contract can perform the perform upkeep function
+    //     @dev conditions for upkeepNeeded to be true:
+    //     1. time interval has to be passed
+    //     2. there should be atleast someone deposited some eth into the vault
+    //     3. our keepers subscription should be funded with link
+    // */
 
-            (
-                ,
-                /* uint80 roundID */
-                int256 answer2, /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/
-                ,
-                ,
+    // function performUpkeep(bytes memory /*performData*/) external override {
+    //     (bool upkeepNeeded, ) = checkUpkeep("");
+    //     if (!upkeepNeeded) {
+    //         revert upkeepNotNeeded();
+    //     } else {
+    //         (
+    //             ,
+    //             /* uint80 roundID */
+    //             int256 answer1 /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+    //             ,
+    //             ,
 
-            ) = priceFeed_INRtoUSD.latestRoundData();
+    //         ) = priceFeed_ETHtoUSD.latestRoundData();
 
-            currentCollateralBalance =
-                (int256(address(this).balance) * answer1) /
-                (answer2);
+    //         (
+    //             ,
+    //             /* uint80 roundID */
+    //             int256 answer2 /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+    //             ,
+    //             ,
 
-            //function to scan each user vault for ratio (returned by enternal oracle)
-            scanVaults();
-        }
-    }
+    //         ) = priceFeed_INRtoUSD.latestRoundData();
 
-    /**
-        @notice This function runs periodically and scans through every vault to check vault health.
-        @dev Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep 
-        function to get price feed for vaults at regular intervals of time, and liquidated vaults.
-        @dev Calls scanVaults() directly and other functions indirectly.
-    */
+    //         currentCollateralBalance =
+    //             (int256(address(this).balance) * answer1) /
+    //             (answer2);
 
-    function checkVaultHealth(address _user) internal returns (bool) {
+    //         //function to scan each user vault for ratio (returned by enternal oracle)
+    //         scanVaults();
+    //     }
+    // }
+
+    // /**
+    //     @notice This function runs periodically and scans through every vault to check vault health.
+    //     @dev Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep
+    //     function to get price feed for vaults at regular intervals of time, and liquidated vaults.
+    //     @dev Calls scanVaults() directly and other functions indirectly.
+    // */
+
+    function calculateVaultHealth(address _user) internal returns (uint256) {
         uint256 collateral = userVaults[userIndexes[_user]].balance;
         uint256 indaiIssued = userVaults[userIndexes[_user]].indaiIssued;
         uint256 vaultHealth = (collateral / indaiIssued) * 100;
         userVaults[userIndexes[_user]].vaultHealth = vaultHealth;
-        return vaultHealth > CIP;
+        return vaultHealth;
     }
 
     /**
-        @notice This checks if collateral to indai ratio is satisfied or not and updates the user's vault health
+        @notice calculates vault health of a users vault at a particular state
+        @dev emits an event if vault health is less than 150
         @dev Vault health in the array of user data is updated in this function 
+        @dev this function is called by scanvaults time to time
+        @dev this function can be used both as a getter(to check vault health of user) and setter(update vault health of user in array)
+        @dev this function is only for the contract, public getter function is the another one.
     */
 
-    function scanVaults() internal  {
+    function liquidationCondition(address user) internal returns (bool) {
+        uint256 current = calculateVaultHealth(user);
+        if (current > CIP) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    function scanVaults() internal {
         uint256 userVaultArrayLength = userVaults.length;
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
             userVaults[i].balanceInINR = userBalanceInInr(
                 userVaults[i].userAddress
             );
-            bool yesOrNo = checkVaultHealth(userVaults[i].userAddress);
-            if (yesOrNo = false) {
+            userVaults[i].vaultHealth = calculateVaultHealth(
+                userVaults[i].userAddress
+            );
+            bool yesOrNo = liquidationCondition(userVaults[i].userAddress);
+            if (yesOrNo = true) {
                 liquidateVault(userVaults[i].userAddress);
                 emit thisIsARiskyVault(
                     i,
@@ -356,17 +380,32 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /*************GETTER FUNCTIONS*************/
 
-    function getCIP()
-        public
-        view
-        returns (
-            //returns collateral to indai percentage
-
-            uint256
-        )
-    {
+    function getCIP() public view returns (uint256) {
         return CIP;
     }
+
+    /** @notice collateral to indai percentage defined by the DAO.
+        @dev public getter function.
+        @return uint256
+    */
+
+    function getBaseRiskRate() public view returns (uint256) {
+        return baseRiskRate;
+    }
+
+    /** @notice base risk rate on all collateral types defined by the DAO.
+        @dev public getter function.
+        @return uint256
+    */
+
+    function getRiskPremiumRate() public view returns (uint256) {
+        return riskPremiumRate;
+    }
+
+    /** @notice risk premium rate on specific collateral type defined by the DAO.
+        @dev public getter function.
+        @return uint256
+    */
 
     function vaultDetailsForTheUser()
         public
@@ -384,30 +423,22 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
 
     /*************MOD OR CONTRACT ONLY GETTER FUNCTIONS*************/
 
-    function userBalanceInInr(address _address)
-        internal
-        view
-        returns (uint256)
-    {
+    function userBalanceInInr(
+        address _address
+    ) internal view returns (uint256) {
         uint256 bal = userVaults[userIndexes[_address]].balance;
 
         (
             ,
-            /* uint80 roundID */
-            int256 a, /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/
-            ,
-            ,
-
-        ) = priceFeed_ETHtoUSD.latestRoundData();
+            /* uint256 time stamp */
+            uint256 a /*uint256 answer*/
+        ) = priceContract.EthToUsd();
 
         (
             ,
-            /* uint80 roundID */
-            int256 b, /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/
-            ,
-            ,
-
-        ) = priceFeed_INRtoUSD.latestRoundData();
+            /* uint256 time stamp */
+            uint256 b /*uint256 answer*/
+        ) = priceContract.InrToUsd();
         uint256 c = (bal * uint256(a)) / uint256(b);
         return c;
     }
@@ -418,11 +449,9 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         @return uint256 type price in inr
     */
 
-    function calculateMaxMintableDai(address user)
-        internal
-        view
-        returns (uint256)
-    {
+    function calculateMaxMintableDai(
+        address user
+    ) internal view returns (uint256) {
         uint256 _userBalanceInInr = userBalanceInInr(user);
         uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued;
         uint256 collateralToDebtRatio = (_userBalanceInInr) / indaiIssued;
@@ -437,12 +466,9 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         return maxMintableDai;
     }
 
-    function calculateMaxWithdrawableCollateral(address user)
-        internal
-        view
-        yesVault
-        returns (uint256)
-    {
+    function calculateMaxWithdrawableCollateral(
+        address user
+    ) internal view yesVault returns (uint256) {
         uint256 collateral = userVaults[userIndexes[user]].balanceInINR;
         require(
             userVaults[userIndexes[user]].indaiIssued <
@@ -458,16 +484,13 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     }
 
     /**
-        @notice calculated max amount of dai that can be minted by user at given vault state
-        @return uint256 type max mintable dai
+        @notice calculates max amount of indai that can be minted by user at given vault state
+        @return uint256 type max mintable indai
     */
 
-    function getUserCollateralBalance(address _address)
-        public
-        view
-        onlyModerator
-        returns (uint256)
-    {
+    function getUserCollateralBalance(
+        address _address
+    ) public view onlyModerator returns (uint256) {
         return userVaults[userIndexes[_address]].balance;
     }
 
@@ -475,7 +498,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
         @return Returns the user's balance in eth
     */
 
-    function currentVaultID() public view onlyModerator returns (uint256) {
+    function getCurrentVaultId() public view onlyModerator returns (uint256) {
         //can be used to get total no of vaults
         //vault id starts from 1
         return vault_ID;
@@ -503,23 +526,7 @@ contract CollateralSafekeep is AccessControl, KeeperCompatibleInterface {
     {
         return userVaults;
     }
-
-    function checkVaultHealthForUser(address _user)
-        public
-        view
-        onlyModerator
-        returns (bool)
-    {
-        return userVaults[userIndexes[_user]].vaultHealth > CIP;
-    }
-
-    /*
-    @notice This function checks if collateral to indai percentage is satisfied for a given user
-    @return bool    
-    **/
 }
-
-
 
 //to implement a new contract for  oracle (kind of for loop)
 

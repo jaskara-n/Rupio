@@ -1,8 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-import "./indai.sol";
+import "./Indai.sol";
 
 contract ISR {
+    struct User {
+        uint userBalance;
+        uint userDepositedAt;
+        uint userWithdrawn;
+        bool isUserWithdrawn;
+        uint rewardAmount;
+        uint lastWithdrawnAmount;
+        uint lastClaimedReward;
+        uint currentRewardAmount;
+        uint lastRewardClaimedAt;
+    }
+
     Indai public indaiToken;
     uint256 lockPeriod;
     uint256 savingsRate; //Indai savings rate
@@ -16,8 +28,7 @@ contract ISR {
         savingsRate = _savingsRate;
     }
 
-    mapping(address => uint256) userBalance;
-    mapping(address => uint256) userDepositedAt;
+    mapping(address => User) users;
 
     modifier ownable() {
         require(msg.sender == admin, "Owner of this can call this function");
@@ -41,39 +52,57 @@ contract ISR {
             indaiToken.allowance(msg.sender, address(this)) >= _amount,
             "Not sufficient allowance"
         );
-        userBalance[msg.sender] += _amount;
+        User memory user = User(
+            _amount,
+            block.timestamp,
+            0,
+            false,
+            0,
+            0,
+            0,
+            0,
+            0
+        );
         totalDeposited += _amount;
-        userDepositedAt[msg.sender] = block.timestamp;
         totalInvestersCount++;
-        indaiToken.transfer(address(this), _amount);
+        users[msg.sender] = user;
+        indaiToken.transferFrom(msg.sender, address(this), _amount);
     }
 
     function withdrawIndai(uint256 _amount) public {
-        uint256 userClaimedAt = block.timestamp;
+        User memory user = users[msg.sender];
+        require(user.isUserWithdrawn == false, "Your balance is zero");
+        uint userLockPeriod = user.userDepositedAt + lockPeriod;
         require(
-            userClaimedAt - userDepositedAt[msg.sender] > lockPeriod,
-            "withdraw the funds after the time reached"
+            block.timestamp >= userLockPeriod,
+            "withdraw your token after the lock period ends"
         );
-        require(
-            totalDeposited >= _amount && userBalance[msg.sender] >= _amount,
-            "Your account doesn't have enough balance"
-        );
-        totalDeposited -= _amount;
-        userBalance[msg.sender] -= _amount;
-        indaiToken.transferFrom(address(this), msg.sender, _amount);
+        user.userBalance = user.userBalance - _amount;
+        user.userWithdrawn = block.timestamp;
+        user.lastWithdrawnAmount = _amount;
+        if (user.userBalance == 0) {
+            user.isUserWithdrawn = true;
+        }
+        users[msg.sender] = user;
+        indaiToken.transfer(msg.sender, _amount);
     }
 
-    function claimIntrest() public {
-        require(
-            userBalance[msg.sender] > 0,
-            "You doesn't have balance in your account"
-        );
-        uint duration = block.timestamp - userDepositedAt[msg.sender];
-        uint interest = (userBalance[msg.sender] * savingsRate * duration) /
-            100;
-        uint value = interest / 31536000;
-        userBalance[msg.sender] += value;
-        totalDeposited += value;
-        indaiToken.mint(msg.sender, value);
+    function calculateInterest(address user) internal returns (uint) {
+        User memory currentUser = users[user];
+        uint duration = (block.timestamp - currentUser.userDepositedAt) / 86400;
+        uint value = (currentUser.userBalance * savingsRate * duration) / 100;
+        currentUser.rewardAmount = value / 365;
+        return currentUser.rewardAmount;
+    }
+
+    function claimReward() public {
+        User memory user = users[msg.sender];
+
+        calculateInterest(msg.sender);
+        user.currentRewardAmount = user.rewardAmount - user.lastClaimedReward;
+        user.lastClaimedReward = user.currentRewardAmount;
+        user.lastRewardClaimedAt = block.timestamp;
+        users[msg.sender] = user;
+        indaiToken.mint(msg.sender, user.currentRewardAmount);
     }
 }
