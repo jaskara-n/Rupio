@@ -14,7 +14,8 @@ contract Indai is
     Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
-    ERC20PermitUpgradeable, Ownable
+    ERC20PermitUpgradeable,
+    Ownable
 {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _initialOwner) {
@@ -28,7 +29,8 @@ contract Indai is
         __ERC20Permit_init("Indai");
     }
 
-    function mint(address to, uint256 amount) public onlyOwner{
+    function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
 }
+/** */
