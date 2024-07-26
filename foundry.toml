@@ -1,0 +1,17 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+viaIR = true
+remappings = ['@aave/core-v3/=lib/protocol-v3',
+            '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts',
+            '@api3/contracts=lib/contracts/contracts',
+            '@uniswap/v3-periphery=node_modules/@uniswap/v3-periphery',
+            '@uniswap/v3-core=node_modules/@uniswap/v3-core',
+    ]
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
-import "@api3/contracts/v0.8/interfaces/IProxy.sol";
+import "@api3/contracts/api3-server-v1/proxies/interfaces/IProxy.sol";
 
 contract PriceFeed {
     address public _EthToUsd = 0x26690F9f17FdC26D419371315bc17950a0FC90eD;
