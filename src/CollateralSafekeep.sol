@@ -1,67 +1,22 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.8;
-
-/**************Interfaces***************/
-interface i_Indai {
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint256);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    function burn(uint256 amount) external;
-
-    function burnFrom(address account, uint256 amount) external;
-
-    function mint(address to, uint256 amount) external;
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-}
-
-interface IPriceFeed {
-    function EthToUsd() external view returns (uint256, uint256);
-
-    function InrToUsd() external view returns (uint256, uint256);
-}
-
 ///@title Indai algorithmic stablecoin
 ///@author Jaskaran Singh
 ///@notice
 ///@dev
 
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {PriceFeed} from "./PriceFeed.sol";
 
 // import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 contract CollateralSafekeep is AccessControl {
     /*************VARIABLES****************/
 
-    i_Indai internal token; //For ERC20 functions of the system
-    IPriceFeed internal priceContract;
+    IERC20 internal token; //For ERC20 functions of the system
+    PriceFeed internal priceContract;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 private lastTimeStamp;
@@ -142,8 +97,8 @@ contract CollateralSafekeep is AccessControl {
     ) {
         _grantRole(ADMIN_ROLE, msg.sender); // Grant ADMIN_ROLE to the contract deployer
         _grantRole(MODERATOR_ROLE, msg.sender);
-        token = i_Indai(_indai);
-        priceContract = IPriceFeed(_priceContract);
+        token = IERC20(_indai);
+        priceContract = PriceFeed(_priceContract);
         lastTimeStamp = block.timestamp;
         /* timeInterval= timeInterval;*/
         CIP = _CIP;
