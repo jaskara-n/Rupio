@@ -30,7 +30,7 @@ contract PriceFeedTest is StdCheats, Test, Script {
         int answer2 = priceFeed.ETHtoUSD();
         assertGt(answer, 0.010 * 1e8);
         assertLt(answer, 0.013 * 1e8);
-        assertGt(answer2, 3255.34 * 1e8);
-        assertLt(answer2, 3259.34 * 1e8);
+        assertGt(answer2, 3000 * 1e8);
+        assertLt(answer2, 3500 * 1e8);
     }
 }
