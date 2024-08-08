@@ -14,8 +14,9 @@ import {Indai} from "./indai.sol";
 // import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 contract CollateralSafekeep is AccessControl {
-    /*************VARIABLES****************/
-
+    /**
+     * VARIABLES***************
+     */
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 public immutable CIP; //Indai to collateral ratio
@@ -27,7 +28,9 @@ contract CollateralSafekeep is AccessControl {
     int256 internal currentCollateralBalance; // total collateral balance of the whole contract in inr
     uint256 internal VAULT_ID;
 
-    /************STRUCTS******************/
+    /**
+     * STRUCTS*****************
+     */
     struct vault {
         uint256 vaultId;
         address userAddress;
@@ -37,10 +40,14 @@ contract CollateralSafekeep is AccessControl {
         uint256 vaultHealth; // vault health should be greater than 150 to avoid liquidation
     }
 
-    /**************ARRAYS***************/
+    /**
+     * ARRAYS**************
+     */
     vault[] internal userVaults;
 
-    /************EVENTS******************/
+    /**
+     * EVENTS*****************
+     */
     event thisIsARiskyVault(
         uint256 vaultId,
         address userAddress,
@@ -50,17 +57,18 @@ contract CollateralSafekeep is AccessControl {
         uint256 vaultHealth
     );
 
-    /************MAPPINGS******************/
+    /**
+     * MAPPINGS*****************
+     */
     mapping(address => uint256) public userIndexes;
 
-    /***************MODIFIERS***********/
+    /**
+     * MODIFIERS**********
+     */
 
     //The user should have a vault
     modifier yesVault() {
-        require(
-            userIndexes[msg.sender] > 0,
-            "You dont have a Vault, create a vault first!"
-        );
+        require(userIndexes[msg.sender] > 0, "You dont have a Vault, create a vault first!");
         _;
     }
 
@@ -69,20 +77,20 @@ contract CollateralSafekeep is AccessControl {
         require(userIndexes[msg.sender] == 0, "You already have a vault");
         _;
     }
+
     modifier onlyAdmin() {
         require(hasRole(ADMIN_ROLE, msg.sender), "Must have ADMIN_ROLE");
         _;
     }
 
     modifier onlyModerator() {
-        require(
-            hasRole(MODERATOR_ROLE, msg.sender),
-            "Must have MODERATOR_ROLE"
-        );
+        require(hasRole(MODERATOR_ROLE, msg.sender), "Must have MODERATOR_ROLE");
         _;
     }
 
-    /***************ERRORS***********/
+    /**
+     * ERRORS**********
+     */
     error upkeepNotNeeded();
     error collateralSafekeep__userInDebt();
 
@@ -104,80 +112,64 @@ contract CollateralSafekeep is AccessControl {
         CIP = _CIP;
         BASE_RISK_RATE = _BASE_RISK_RATE;
         RISK_PREMIUM_RATE = _RISK_PREMIUM_RATE;
-        vault memory initialVault = vault({
-            indaiIssued: 0,
-            userAddress: address(0),
-            vaultId: 0,
-            balance: 0,
-            balanceInINR: 0,
-            vaultHealth: 0
-        });
+        vault memory initialVault =
+            vault({indaiIssued: 0, userAddress: address(0), vaultId: 0, balance: 0, balanceInINR: 0, vaultHealth: 0});
         userVaults.push(initialVault);
     }
 
-    /*************PUBLIC FUNCTIONS************/
-    function createVault() public payable noVault {
+    /**
+     * PUBLIC FUNCTIONS***********
+     */
+    function createOrUpdateVault() public payable {
         require(msg.value > 0, "ETH amount must be greater than 0");
-        vault memory newVault;
-        newVault.balance = msg.value;
-        newVault.userAddress = msg.sender;
-        newVault.vaultId = VAULT_ID;
-        newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
-        newVault.vaultHealth = collateralToInr(msg.value) * 100; //Full health for new vault
-        newVault.balanceInINR = collateralToInr(msg.value);
-        userVaults.push(newVault);
+        if (userIndexes[msg.sender] == 0) {
+            vault memory newVault;
+            newVault.balance = msg.value;
+            newVault.userAddress = msg.sender;
+            newVault.vaultId = VAULT_ID;
+            newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
+            newVault.vaultHealth = collateralToInr(msg.value) * 100; //Full health for new vault
+            newVault.balanceInINR = collateralToInr(msg.value);
+            userVaults.push(newVault);
 
-        userIndexes[msg.sender] = VAULT_ID;
-        VAULT_ID = VAULT_ID + 1;
+            userIndexes[msg.sender] = VAULT_ID;
+            VAULT_ID = VAULT_ID + 1;
+        } else {
+            userVaults[userIndexes[msg.sender]].balance += msg.value;
+            userVaults[userIndexes[msg.sender]].balanceInINR =
+                collateralToInr(userVaults[userIndexes[msg.sender]].balance);
+        }
     }
 
     /**
-        @notice creates a new vault for a user
-    */
-
+     * @notice creates a new vault for a user
+     */
     function mintIndai(uint256 amount) public yesVault returns (uint256) {
         require(amount > 0, "enter valid amount");
-        require(
-            userVaults[userIndexes[msg.sender]].vaultHealth > CIP,
-            "you are in debt!"
-        );
+        require(userVaults[userIndexes[msg.sender]].vaultHealth > CIP, "you are in debt!");
         uint256 max = _calculateMaxMintableDai(msg.sender);
         require(amount < max, "enter amount less than CIP cross");
         token.mint(msg.sender, amount);
         userVaults[userIndexes[msg.sender]].indaiIssued += amount;
-        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(
-            msg.sender
-        );
+        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(msg.sender);
         return max;
     }
 
     /**
-        @notice This allows user to mint indai based on their collateral in the vault
-        @notice User cannot mint if vault health is lower than 150 percent
-        @notice One indai is issued for every ruppee of collateral(in eth, converted to inr)
-        @dev This function is the algorithmic minting of indai, one indai is minted for every rupee of collateral
-        @dev Updates the token amount in the user's vault
-        @custom:misc User can use this function to mint dai after depositing the collateral in vault
-    */
-
-    function updateVault() public payable yesVault {
-        require(msg.value > 0, "eth amount must be greater than 0");
-        userVaults[userIndexes[msg.sender]].balance += msg.value;
-        userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(
-            userVaults[userIndexes[msg.sender]].balance
-        );
-    }
+     * @notice This allows user to mint indai based on their collateral in the vault
+     *     @notice User cannot mint if vault health is lower than 150 percent
+     *     @notice One indai is issued for every ruppee of collateral(in eth, converted to inr)
+     *     @dev This function is the algorithmic minting of indai, one indai is minted for every rupee of collateral
+     *     @dev Updates the token amount in the user's vault
+     *     @custom:misc User can use this function to mint dai after depositing the collateral in vault
+     */
 
     /**
-        @notice This adds nore collateral in eth to the user's existing vault
-    */
-
+     * @notice This adds nore collateral in eth to the user's existing vault
+     */
     function withdrawFromVault(uint256 amount) public payable yesVault {
         require(amount > 0, "Withdraw amount should be greater than 0");
-        require(
-            userVaults[userIndexes[msg.sender]].balance >= amount,
-            "insufficient balance in vault"
-        );
+        require(userVaults[userIndexes[msg.sender]].balance >= amount, "insufficient balance in vault");
         require(_calculateVaultHealth(msg.sender) > 150, "Clear your debt!");
         // require(
         //     liquidationCondition(msg.sender) == true,
@@ -187,19 +179,14 @@ contract CollateralSafekeep is AccessControl {
         require(amount <= max, "you will go into debt!");
         payable(msg.sender).transfer(amount);
         userVaults[userIndexes[msg.sender]].balance -= amount;
-        userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(
-            userVaults[userIndexes[msg.sender]].balance
-        );
-        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(
-            msg.sender
-        );
+        userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(userVaults[userIndexes[msg.sender]].balance);
+        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(msg.sender);
     }
 
     /**
-        @notice User can withdraw if any excess collateral than 150 percent of indai issued
-        @dev only allow user to withdraw if no debt in vault    
-    */
-
+     * @notice User can withdraw if any excess collateral than 150 percent of indai issued
+     *     @dev only allow user to withdraw if no debt in vault
+     */
     function burnIndaiAndRelieveCollateral(uint256 amount) public yesVault {
         require(userVaults[userIndexes[msg.sender]].indaiIssued > 0);
         require(userVaults[userIndexes[msg.sender]].indaiIssued >= amount);
@@ -208,35 +195,36 @@ contract CollateralSafekeep is AccessControl {
         _calculateVaultHealth(msg.sender);
     }
 
-    /*************PUBLIC GETTER FUNCTIONS*************/
-
+    /**
+     * PUBLIC GETTER FUNCTIONS************
+     */
     function getCIP() public view returns (uint256) {
         return CIP;
     }
 
-    /** @notice collateral to indai percentage defined by the DAO.
-        @dev public getter function.
-        @return uint256
-    */
-
+    /**
+     * @notice collateral to indai percentage defined by the DAO.
+     *     @dev public getter function.
+     *     @return uint256
+     */
     function getBASE_RISK_RATE() public view returns (uint256) {
         return BASE_RISK_RATE;
     }
 
-    /** @notice base risk rate on all collateral types defined by the DAO.
-        @dev public getter function.
-        @return uint256
-    */
-
+    /**
+     * @notice base risk rate on all collateral types defined by the DAO.
+     *     @dev public getter function.
+     *     @return uint256
+     */
     function getRISK_PREMIUM_RATE() public view returns (uint256) {
         return RISK_PREMIUM_RATE;
     }
 
-    /** @notice risk premium rate on specific collateral type defined by the DAO.
-        @dev public getter function.
-        @return uint256
-    */
-
+    /**
+     * @notice risk premium rate on specific collateral type defined by the DAO.
+     *     @dev public getter function.
+     *     @return uint256
+     */
     function vaultDetailsForTheUser()
         public
         view
@@ -258,96 +246,77 @@ contract CollateralSafekeep is AccessControl {
         return userVaults[userIndexes[msg.sender]];
     }
 
-    /*************MOD ONLY FUNCTIONS*************/
-
+    /**
+     * MOD ONLY FUNCTIONS************
+     */
     function grantModeratorRole(address account) public onlyModerator {
         grantRole(MODERATOR_ROLE, account);
     }
 
-    function calculateVaultHealth(
-        address _user
-    ) public onlyModerator returns (uint256) {
+    function calculateVaultHealth(address _user) public onlyModerator returns (uint256) {
         uint256 vaultHealth = _calculateVaultHealth(_user);
         return vaultHealth;
     }
 
     function liquidateVault(address _vaultAddress) public onlyModerator {}
 
-    /** @notice liquidates vaults that get too risky.
-        @dev this function is public in case we need to manually liquidate a vault
-        @return 
-    */
+    /**
+     * @notice liquidates vaults that get too risky.
+     *     @dev this function is public in case we need to manually liquidate a vault
+     *     @return
+     */
 
-    /*************MOD ONLY GETTER FUNCTIONS*************/
-    function getUserCollateralBalance(
-        address _address
-    ) public view onlyModerator returns (uint256) {
+    /**
+     * MOD ONLY GETTER FUNCTIONS************
+     */
+    function getUserCollateralBalance(address _address) public view onlyModerator returns (uint256) {
         return userVaults[userIndexes[_address]].balance;
     }
 
     /**
-        @return Returns the user's balance in eth
-    */
-
+     * @return Returns the user's balance in eth
+     */
     function getCurrentVaultId() public view onlyModerator returns (uint256) {
         //can be used to get total no of vaults
         //vault id starts from 1
         return VAULT_ID;
     }
 
-    function getTotalCollateralPrice()
-        public
-        view
-        onlyModerator
-        returns (int256)
-    {
+    function getTotalCollateralPrice() public view onlyModerator returns (int256) {
         return currentCollateralBalance;
     }
 
     /**
-        @return  total collateral balance of the whole contract in eth
-    */
+     * @return  total collateral balance of the whole contract in eth
+     */
 
     //returns total database of vaults in array of structs
-    function getTotalVaultDetails()
-        public
-        view
-        onlyModerator
-        returns (vault[] memory)
-    {
+    function getTotalVaultDetails() public view onlyModerator returns (vault[] memory) {
         return userVaults;
     }
 
-    function userBalanceInInr(
-        address _address
-    ) public view onlyModerator returns (uint256) {
+    function userBalanceInInr(address _address) public view onlyModerator returns (uint256) {
         uint256 bal = userVaults[userIndexes[_address]].balance; // in 18 decimals cuz eth
 
         return collateralToInr(bal);
     }
 
-    function amountInrToEth(
-        uint256 amountINR
-    ) public view onlyModerator returns (uint256) {
+    function amountInrToEth(uint256 amountINR) public view onlyModerator returns (uint256) {
         return _amountInrToEth(amountINR);
     }
 
-    function calculateMaxWithdrawableCollateral(
-        address user
-    ) public view onlyModerator returns (uint256) {
+    function calculateMaxWithdrawableCollateral(address user) public view onlyModerator returns (uint256) {
         return _calculateMaxWithdrawableCollateral(user);
     }
 
-    function calculateMaxMintableDai(
-        address user
-    ) public view onlyModerator returns (uint256 max) {
+    function calculateMaxMintableDai(address user) public view onlyModerator returns (uint256 max) {
         return _calculateMaxMintableDai(user);
     }
 
     /**
-        @notice User can burn their indai tokens to repay their debt 
-        @dev only allow user to withdraw if no debt in vault    
-    */
+     * @notice User can burn their indai tokens to repay their debt
+     *     @dev only allow user to withdraw if no debt in vault
+     */
 
     // function checkUpkeep(
     //     bytes memory /*performData*/
@@ -404,7 +373,9 @@ contract CollateralSafekeep is AccessControl {
     //     @dev Calls scanVaults() directly and other functions indirectly.
     // */
 
-    /*************INTERNAL FUNCTIONS*************/
+    /**
+     * INTERNAL FUNCTIONS************
+     */
     function _calculateVaultHealth(address _user) internal returns (uint256) {
         uint256 collateral = userVaults[userIndexes[_user]].balanceInINR; //in inr, 8 decimals
 
@@ -419,14 +390,13 @@ contract CollateralSafekeep is AccessControl {
     }
 
     /**
-        @notice calculates vault health of a users vault at a particular state
-        @dev emits an event if vault health is less than 150
-        @dev Vault health in the array of user data is updated in this function 
-        @dev this function is called by scanvaults time to time
-        @dev this function can be used both as a getter(to check vault health of user) and setter(update vault health of user in array)
-        @dev this function is only for the contract, public getter function is the another one.
-    */
-
+     * @notice calculates vault health of a users vault at a particular state
+     *     @dev emits an event if vault health is less than 150
+     *     @dev Vault health in the array of user data is updated in this function
+     *     @dev this function is called by scanvaults time to time
+     *     @dev this function can be used both as a getter(to check vault health of user) and setter(update vault health of user in array)
+     *     @dev this function is only for the contract, public getter function is the another one.
+     */
     function liquidationCondition(address user) internal returns (bool) {
         uint256 current = calculateVaultHealth(user);
         if (current > CIP) {
@@ -439,12 +409,8 @@ contract CollateralSafekeep is AccessControl {
     function scanVaults() internal {
         uint256 userVaultArrayLength = userVaults.length;
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
-            userVaults[i].balanceInINR = userBalanceInInr(
-                userVaults[i].userAddress
-            );
-            userVaults[i].vaultHealth = calculateVaultHealth(
-                userVaults[i].userAddress
-            );
+            userVaults[i].balanceInINR = userBalanceInInr(userVaults[i].userAddress);
+            userVaults[i].vaultHealth = calculateVaultHealth(userVaults[i].userAddress);
             bool yesOrNo = liquidationCondition(userVaults[i].userAddress);
             if (yesOrNo = true) {
                 liquidateVault(userVaults[i].userAddress);
@@ -461,13 +427,15 @@ contract CollateralSafekeep is AccessControl {
     }
 
     /**
-        @notice This function liquidates vaults that get too risky
-        @dev emits event of the risky vaults 
-        @dev this function is periodically called by chainlink keepers
-        @dev this function updates the user's collateral balance in inr in the vault periodically
-    */
+     * @notice This function liquidates vaults that get too risky
+     *     @dev emits event of the risky vaults
+     *     @dev this function is periodically called by chainlink keepers
+     *     @dev this function updates the user's collateral balance in inr in the vault periodically
+     */
 
-    /*************INTERNAL GETTER FUNCTIONS*************/
+    /**
+     * INTERNAL GETTER FUNCTIONS************
+     */
     function collateralToInr(uint256 balance) internal view returns (uint256) {
         int256 a = priceContract.ETHtoUSD(); // in 8 decimals cuz usd
 
@@ -478,9 +446,7 @@ contract CollateralSafekeep is AccessControl {
         return d;
     }
 
-    function _amountInrToEth(
-        uint256 amountINR
-    ) internal view returns (uint256) {
+    function _amountInrToEth(uint256 amountINR) internal view returns (uint256) {
         int256 a = priceContract.ETHtoUSD();
         int256 b = priceContract.INRtoUSD();
         uint256 c = (uint256(b) * amountINR) / uint256(a);
@@ -489,18 +455,14 @@ contract CollateralSafekeep is AccessControl {
     }
 
     /**
-        @notice returns current vault balance of a user in inr
-        @dev returns only the current balance that is stored in eth, by converting it to inr
-        @return max type uint256 price in inr
-    */
-
-    function _calculateMaxMintableDai(
-        address user
-    ) internal view returns (uint256) {
-        require(
-            userVaults[userIndexes[user]].vaultHealth > 150,
-            "you are in debt!"
-        );
+     * @notice returns current vault balance of a user in inr
+     *     @dev returns only the current balance that is stored in eth, by converting it to inr
+     *     @return max type uint256 price in inr
+     */
+    function _calculateMaxMintableDai(address user) internal view returns (uint256) {
+        if (userVaults[userIndexes[user]].vaultHealth < 150) {
+            return 0;
+        }
         uint256 bal = userVaults[userIndexes[user]].balance; //amount, can say 1 token = 1 inr
         uint256 _userBalanceInInr = collateralToInr(bal); // in 8 decimals
         uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued; //amount, can say 1 token = 1 inr
@@ -509,20 +471,14 @@ contract CollateralSafekeep is AccessControl {
         return grand;
     }
 
-    function _calculateMaxWithdrawableCollateral(
-        address user
-    ) internal view returns (uint256) {
+    function _calculateMaxWithdrawableCollateral(address user) internal view returns (uint256) {
         uint256 collateral = userVaults[userIndexes[user]].balanceInINR;
         uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued;
         require(
-            (userVaults[userIndexes[user]].indaiIssued) * 1e8 <
-                userVaults[userIndexes[user]].balanceInINR,
+            (userVaults[userIndexes[user]].indaiIssued) * 1e8 < userVaults[userIndexes[user]].balanceInINR,
             "you are in debt!"
         );
-        require(
-            userVaults[userIndexes[user]].vaultHealth > CIP,
-            "you are in debt"
-        );
+        require(userVaults[userIndexes[user]].vaultHealth > CIP, "you are in debt");
         if (indaiIssued == 0) {
             return _amountInrToEth(collateral);
         } else {
@@ -536,9 +492,9 @@ contract CollateralSafekeep is AccessControl {
     }
 
     /**
-        @notice calculates max amount of indai that can be minted by user at given vault state
-        @return uint256 type max mintable indai
-    */
+     * @notice calculates max amount of indai that can be minted by user at given vault state
+     *     @return uint256 type max mintable indai
+     */
 }
 
 //to implement a new contract for  oracle (kind of for loop)
@@ -558,4 +514,5 @@ contract CollateralSafekeep is AccessControl {
 //To add logic to withdraw amount after cutting the fee
 //Or to let repay indai+fee(stability fee)
 
-/** */
+/**
+ */

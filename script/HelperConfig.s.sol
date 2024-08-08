@@ -6,11 +6,13 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/Test.sol";
 import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 
-/** uint256 _CIP,
-        uint256 _baseRiskRate,
-        uint256 _riskPremiumRate,
-        address _indai,
-        address _priceContract */
+/**
+ * uint256 _CIP,
+ *         uint256 _baseRiskRate,
+ *         uint256 _riskPremiumRate,
+ *         address _indai,
+ *         address _priceContract
+ */
 contract HelperConfig is Script {
     uint256 BASE_RISK_RATE = 150;
     uint256 RISK_PREMIUM_RATE = 130;
@@ -23,6 +25,7 @@ contract HelperConfig is Script {
         uint256 baseRiskRate;
         uint256 riskPremiumRate;
     }
+
     NetworkConfig public ActiveConfig;
 
     constructor() {
@@ -33,19 +36,11 @@ contract HelperConfig is Script {
         // }
     }
 
-    function getOptimismMainnetConfig()
-        public
-        view
-        returns (NetworkConfig memory)
-    {
+    function getOptimismMainnetConfig() public view returns (NetworkConfig memory) {
         console.log("forking optimism mainnet now....");
         NetworkConfig memory mainnetConfig = NetworkConfig({
-            priceFeed: vm.envAddress(
-                "OPTIMISM_MAINNET_INRUSD_PRICEFEED_ADDRESS"
-            ),
-            priceFeed2: vm.envAddress(
-                "OPTIMISM_MAINNET_ETHUSD_PRICEFEED_ADDRESS"
-            ),
+            priceFeed: vm.envAddress("OPTIMISM_MAINNET_INRUSD_PRICEFEED_ADDRESS"),
+            priceFeed2: vm.envAddress("OPTIMISM_MAINNET_ETHUSD_PRICEFEED_ADDRESS"),
             baseRiskRate: BASE_RISK_RATE,
             riskPremiumRate: RISK_PREMIUM_RATE,
             cip: CIP
@@ -56,10 +51,7 @@ contract HelperConfig is Script {
     function getAnvilConfig() public returns (NetworkConfig memory) {
         console.log("local network detected, deploying mocks!!");
         MockV3Aggregator mock = new MockV3Aggregator(uint8(8), int256(1200000));
-        MockV3Aggregator mock2 = new MockV3Aggregator(
-            uint8(8),
-            int256(325834000000)
-        );
+        MockV3Aggregator mock2 = new MockV3Aggregator(uint8(8), int256(325834000000));
         NetworkConfig memory anvilConfig = NetworkConfig({
             priceFeed: address(mock),
             priceFeed2: address(mock2),

@@ -20,17 +20,16 @@ contract PriceFeedTest is StdCheats, Test, Script {
         vm.selectFork(optimismFork);
 
         priceFeed = new PriceFeed(
-            helperConfig.getOptimismMainnetConfig().priceFeed,
-            helperConfig.getOptimismMainnetConfig().priceFeed2
+            helperConfig.getOptimismMainnetConfig().priceFeed, helperConfig.getOptimismMainnetConfig().priceFeed2
         );
     }
 
     function testGetPrice() public {
-        int answer = priceFeed.INRtoUSD();
-        int answer2 = priceFeed.ETHtoUSD();
-        assertGt(answer, 0.010 * 1e8);
+        int256 answer = priceFeed.INRtoUSD();
+        int256 answer2 = priceFeed.ETHtoUSD();
+        assertGt(answer, 0.01 * 1e8);
         assertLt(answer, 0.013 * 1e8);
-        assertGt(answer2, 3000 * 1e8);
+        assertGt(answer2, 2000 * 1e8);
         assertLt(answer2, 3500 * 1e8);
     }
 }

@@ -28,10 +28,7 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
         helperConfig = new HelperConfig();
 
-        priceFeed = new PriceFeed(
-            helperConfig.getAnvilConfig().priceFeed,
-            helperConfig.getAnvilConfig().priceFeed2
-        );
+        priceFeed = new PriceFeed(helperConfig.getAnvilConfig().priceFeed, helperConfig.getAnvilConfig().priceFeed2);
 
         vm.startPrank(user);
 
@@ -48,33 +45,37 @@ contract PriceFeedTest is StdCheats, Test, Script {
         vm.stopPrank();
     }
 
-    function testCreateVault() public {
+    function testCreateOrUpdateVault() public {
         vm.startPrank(user2);
-        csk.createVault{value: 0.5 ether}();
-        CollateralSafekeep.vault memory tempVault = csk
-            .vaultDetailsForTheUser();
+        csk.createOrUpdateVault{value: 0.5 ether}();
+        CollateralSafekeep.vault memory tempVault = csk.vaultDetailsForTheUser();
         assertEq(tempVault.vaultId, 1);
         assertEq(tempVault.balance, 0.5 ether);
         assertEq(tempVault.indaiIssued, 0);
         assertEq(tempVault.balanceInINR, 135764.16666666 * 1e8);
-        vm.expectRevert(bytes("You already have a vault"));
-        csk.createVault{value: 0.5 ether}();
 
+        vm.stopPrank();
+        vm.startPrank(user3);
+        csk.createOrUpdateVault{value: 1 ether}();
+        csk.mintIndai(5000);
+        csk.createOrUpdateVault{value: 1 ether}();
+        CollateralSafekeep.vault memory tempVault2 = csk.vaultDetailsForTheUser();
+        assertEq(tempVault2.balance, 2 * 1e18);
+        assertGt(tempVault2.balanceInINR, 500000 * 1e8);
+        assertLt(tempVault2.balanceInINR, 600000 * 1e8);
         vm.stopPrank();
     }
 
     function testUserBalanceInInr() public {
         vm.startPrank(user3);
-        csk.createVault{value: 1 ether}();
-        CollateralSafekeep.vault memory tempVault = csk
-            .vaultDetailsForTheUser();
+        csk.createOrUpdateVault{value: 1 ether}();
+        CollateralSafekeep.vault memory tempVault = csk.vaultDetailsForTheUser();
         assertEq(tempVault.vaultId, 1);
         vm.stopPrank();
 
         vm.startPrank(user4);
-        csk.createVault{value: 1.5 ether}();
-        CollateralSafekeep.vault memory tempVault2 = csk
-            .vaultDetailsForTheUser();
+        csk.createOrUpdateVault{value: 1.5 ether}();
+        CollateralSafekeep.vault memory tempVault2 = csk.vaultDetailsForTheUser();
         assertEq(tempVault2.vaultId, 2);
         vm.stopPrank();
 
@@ -90,7 +91,7 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function testCalcualteVaultHealth() public {
         vm.prank(user5);
-        csk.createVault{value: 1 ether}();
+        csk.createOrUpdateVault{value: 1 ether}();
         vm.prank(user);
         uint256 health = csk.calculateVaultHealth(user5);
         assertGt(health, 200000 * 1e8 * 100);
@@ -99,7 +100,7 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function testCalculateMaxMintableDai() public {
         vm.prank(user5);
-        csk.createVault{value: 1 ether}();
+        csk.createOrUpdateVault{value: 1 ether}();
         vm.prank(user);
         uint256 max = csk.calculateMaxMintableDai(user5);
         assertGt(max, 100000);
@@ -122,36 +123,20 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function testMintIndai() public {
         vm.startPrank(user3);
-        csk.createVault{value: 1 ether}();
+        csk.createOrUpdateVault{value: 1 ether}();
         vm.expectRevert(bytes("enter amount less than CIP cross"));
         csk.mintIndai(275513);
-        CollateralSafekeep.vault memory tempVault2 = csk
-            .vaultDetailsForTheUser();
+        CollateralSafekeep.vault memory tempVault2 = csk.vaultDetailsForTheUser();
         uint256 max = csk.mintIndai(3000);
         assertGt(max, 0);
-        CollateralSafekeep.vault memory tempVault = csk
-            .vaultDetailsForTheUser();
+        CollateralSafekeep.vault memory tempVault = csk.vaultDetailsForTheUser();
         assertEq(tempVault.indaiIssued, 3000);
         assertLt(tempVault.vaultHealth, tempVault2.vaultHealth);
         assertEq(indai.balanceOf(user3), 3000);
         uint256 max2 = csk.mintIndai(10000);
         assertGt(max2, 0);
-        CollateralSafekeep.vault memory tempVault3 = csk
-            .vaultDetailsForTheUser();
+        CollateralSafekeep.vault memory tempVault3 = csk.vaultDetailsForTheUser();
         assertGt(tempVault3.indaiIssued, tempVault.indaiIssued);
-        vm.stopPrank();
-    }
-
-    function testUpdateVault() public {
-        vm.startPrank(user2);
-        csk.createVault{value: 1 ether}();
-        csk.mintIndai(5000);
-        csk.updateVault{value: 1 ether}();
-        CollateralSafekeep.vault memory tempVault = csk
-            .vaultDetailsForTheUser();
-        assertEq(tempVault.balance, 2 * 1e18);
-        assertGt(tempVault.balanceInINR, 500000 * 1e8);
-        assertLt(tempVault.balanceInINR, 600000 * 1e8);
         vm.stopPrank();
     }
 
@@ -166,7 +151,7 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function testCalculateMaxWithdrawableCollateral() public {
         vm.prank(user2);
-        csk.createVault{value: 1 ether}();
+        csk.createOrUpdateVault{value: 1 ether}();
         vm.prank(user);
         uint256 max = csk.calculateMaxWithdrawableCollateral(user2);
         assertGt(max, 0.9 ether);
@@ -187,18 +172,15 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function testWithdrawFromVault() public {
         vm.startPrank(user3);
-        csk.createVault{value: 1 ether}();
+        csk.createOrUpdateVault{value: 1 ether}();
         uint256 balbefore = address(csk).balance;
-        CollateralSafekeep.vault memory tempVault = csk
-            .vaultDetailsForTheUser();
+        CollateralSafekeep.vault memory tempVault = csk.vaultDetailsForTheUser();
         csk.withdrawFromVault(0.5 ether);
         uint256 balafter = address(csk).balance;
 
-        CollateralSafekeep.vault memory tempVault2 = csk
-            .vaultDetailsForTheUser();
+        CollateralSafekeep.vault memory tempVault2 = csk.vaultDetailsForTheUser();
         csk.mintIndai(10000);
-        CollateralSafekeep.vault memory tempVault3 = csk
-            .vaultDetailsForTheUser();
+        CollateralSafekeep.vault memory tempVault3 = csk.vaultDetailsForTheUser();
         assertLt(tempVault2.balance, tempVault.balance);
         assertLt(tempVault2.vaultHealth, tempVault.vaultHealth);
         assertLt(tempVault3.vaultHealth, tempVault2.vaultHealth);
@@ -207,7 +189,7 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function testBurnIndaiAndRelieveCollateral() public {
         vm.startPrank(user3);
-        csk.createVault{value: 0.5 ether}();
+        csk.createOrUpdateVault{value: 0.5 ether}();
         csk.mintIndai(5000);
         assertEq(indai.balanceOf(user3), 5000);
         csk.burnIndaiAndRelieveCollateral(5000);

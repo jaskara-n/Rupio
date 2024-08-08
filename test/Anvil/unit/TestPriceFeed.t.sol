@@ -13,15 +13,12 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function setUp() public {
         helperConfig = new HelperConfig();
-        priceFeed = new PriceFeed(
-            helperConfig.getAnvilConfig().priceFeed,
-            helperConfig.getAnvilConfig().priceFeed2
-        );
+        priceFeed = new PriceFeed(helperConfig.getAnvilConfig().priceFeed, helperConfig.getAnvilConfig().priceFeed2);
     }
 
     function testGetPrice() public {
-        int answer = priceFeed.INRtoUSD();
-        int answer2 = priceFeed.ETHtoUSD();
+        int256 answer = priceFeed.INRtoUSD();
+        int256 answer2 = priceFeed.ETHtoUSD();
         assertEq(answer, 0.012 * 1e8);
         assertEq(answer2, 3258.34 * 1e8);
     }

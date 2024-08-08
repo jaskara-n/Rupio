@@ -12,25 +12,31 @@ contract PriceFeed {
         dataFeed2 = AggregatorV3Interface(_priceFeedAddress2);
     }
 
-    function INRtoUSD() public view returns (int) {
+    function INRtoUSD() public view returns (int256) {
         // prettier-ignore
         (
-            /* uint80 roundID */,
-            int answer,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
+            /* uint80 roundID */
+            ,
+            int256 answer,
+            /*uint startedAt*/
+            ,
+            /*uint timeStamp*/
+            ,
             /*uint80 answeredInRound*/
         ) = dataFeed1.latestRoundData();
         return answer;
     }
 
-    function ETHtoUSD() public view returns (int) {
+    function ETHtoUSD() public view returns (int256) {
         // prettier-ignore
         (
-            /* uint80 roundID */,
-            int answer2,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
+            /* uint80 roundID */
+            ,
+            int256 answer2,
+            /*uint startedAt*/
+            ,
+            /*uint timeStamp*/
+            ,
             /*uint80 answeredInRound*/
         ) = dataFeed2.latestRoundData();
         return answer2;
