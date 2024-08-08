@@ -17,7 +17,6 @@ contract CollateralSafekeep is AccessControl {
     /**
      * VARIABLES***************
      */
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 public immutable CIP; //Indai to collateral ratio
     uint256 public immutable BASE_RISK_RATE; //Base rate debt on a vault
@@ -68,7 +67,10 @@ contract CollateralSafekeep is AccessControl {
 
     //The user should have a vault
     modifier yesVault() {
-        require(userIndexes[msg.sender] > 0, "You dont have a Vault, create a vault first!");
+        require(
+            userIndexes[msg.sender] > 0,
+            "You dont have a Vault, create a vault first!"
+        );
         _;
     }
 
@@ -78,13 +80,11 @@ contract CollateralSafekeep is AccessControl {
         _;
     }
 
-    modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Must have ADMIN_ROLE");
-        _;
-    }
-
     modifier onlyModerator() {
-        require(hasRole(MODERATOR_ROLE, msg.sender), "Must have MODERATOR_ROLE");
+        require(
+            hasRole(MODERATOR_ROLE, msg.sender),
+            "Must have MODERATOR_ROLE"
+        );
         _;
     }
 
@@ -103,7 +103,6 @@ contract CollateralSafekeep is AccessControl {
         address _priceContract
     ) {
         VAULT_ID = 1;
-        _grantRole(ADMIN_ROLE, msg.sender); // Grant ADMIN_ROLE to the contract deployer
         _grantRole(MODERATOR_ROLE, msg.sender);
         token = Indai(_indai);
         priceContract = PriceFeed(_priceContract);
@@ -112,8 +111,14 @@ contract CollateralSafekeep is AccessControl {
         CIP = _CIP;
         BASE_RISK_RATE = _BASE_RISK_RATE;
         RISK_PREMIUM_RATE = _RISK_PREMIUM_RATE;
-        vault memory initialVault =
-            vault({indaiIssued: 0, userAddress: address(0), vaultId: 0, balance: 0, balanceInINR: 0, vaultHealth: 0});
+        vault memory initialVault = vault({
+            indaiIssued: 0,
+            userAddress: address(0),
+            vaultId: 0,
+            balance: 0,
+            balanceInINR: 0,
+            vaultHealth: 0
+        });
         userVaults.push(initialVault);
     }
 
@@ -136,8 +141,9 @@ contract CollateralSafekeep is AccessControl {
             VAULT_ID = VAULT_ID + 1;
         } else {
             userVaults[userIndexes[msg.sender]].balance += msg.value;
-            userVaults[userIndexes[msg.sender]].balanceInINR =
-                collateralToInr(userVaults[userIndexes[msg.sender]].balance);
+            userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(
+                userVaults[userIndexes[msg.sender]].balance
+            );
         }
     }
 
@@ -146,12 +152,17 @@ contract CollateralSafekeep is AccessControl {
      */
     function mintIndai(uint256 amount) public yesVault returns (uint256) {
         require(amount > 0, "enter valid amount");
-        require(userVaults[userIndexes[msg.sender]].vaultHealth > CIP, "you are in debt!");
+        require(
+            userVaults[userIndexes[msg.sender]].vaultHealth > CIP,
+            "you are in debt!"
+        );
         uint256 max = _calculateMaxMintableDai(msg.sender);
         require(amount < max, "enter amount less than CIP cross");
         token.mint(msg.sender, amount);
         userVaults[userIndexes[msg.sender]].indaiIssued += amount;
-        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(msg.sender);
+        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(
+            msg.sender
+        );
         return max;
     }
 
@@ -169,7 +180,10 @@ contract CollateralSafekeep is AccessControl {
      */
     function withdrawFromVault(uint256 amount) public payable yesVault {
         require(amount > 0, "Withdraw amount should be greater than 0");
-        require(userVaults[userIndexes[msg.sender]].balance >= amount, "insufficient balance in vault");
+        require(
+            userVaults[userIndexes[msg.sender]].balance >= amount,
+            "insufficient balance in vault"
+        );
         require(_calculateVaultHealth(msg.sender) > 150, "Clear your debt!");
         // require(
         //     liquidationCondition(msg.sender) == true,
@@ -179,8 +193,12 @@ contract CollateralSafekeep is AccessControl {
         require(amount <= max, "you will go into debt!");
         payable(msg.sender).transfer(amount);
         userVaults[userIndexes[msg.sender]].balance -= amount;
-        userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(userVaults[userIndexes[msg.sender]].balance);
-        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(msg.sender);
+        userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(
+            userVaults[userIndexes[msg.sender]].balance
+        );
+        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(
+            msg.sender
+        );
     }
 
     /**
@@ -253,7 +271,9 @@ contract CollateralSafekeep is AccessControl {
         grantRole(MODERATOR_ROLE, account);
     }
 
-    function calculateVaultHealth(address _user) public onlyModerator returns (uint256) {
+    function calculateVaultHealth(
+        address _user
+    ) public onlyModerator returns (uint256) {
         uint256 vaultHealth = _calculateVaultHealth(_user);
         return vaultHealth;
     }
@@ -269,7 +289,9 @@ contract CollateralSafekeep is AccessControl {
     /**
      * MOD ONLY GETTER FUNCTIONS************
      */
-    function getUserCollateralBalance(address _address) public view onlyModerator returns (uint256) {
+    function getUserCollateralBalance(
+        address _address
+    ) public view onlyModerator returns (uint256) {
         return userVaults[userIndexes[_address]].balance;
     }
 
@@ -282,7 +304,12 @@ contract CollateralSafekeep is AccessControl {
         return VAULT_ID;
     }
 
-    function getTotalCollateralPrice() public view onlyModerator returns (int256) {
+    function getTotalCollateralPrice()
+        public
+        view
+        onlyModerator
+        returns (int256)
+    {
         return currentCollateralBalance;
     }
 
@@ -291,25 +318,38 @@ contract CollateralSafekeep is AccessControl {
      */
 
     //returns total database of vaults in array of structs
-    function getTotalVaultDetails() public view onlyModerator returns (vault[] memory) {
+    function getTotalVaultDetails()
+        public
+        view
+        onlyModerator
+        returns (vault[] memory)
+    {
         return userVaults;
     }
 
-    function userBalanceInInr(address _address) public view onlyModerator returns (uint256) {
+    function userBalanceInInr(
+        address _address
+    ) public view onlyModerator returns (uint256) {
         uint256 bal = userVaults[userIndexes[_address]].balance; // in 18 decimals cuz eth
 
         return collateralToInr(bal);
     }
 
-    function amountInrToEth(uint256 amountINR) public view onlyModerator returns (uint256) {
+    function amountInrToEth(
+        uint256 amountINR
+    ) public view onlyModerator returns (uint256) {
         return _amountInrToEth(amountINR);
     }
 
-    function calculateMaxWithdrawableCollateral(address user) public view onlyModerator returns (uint256) {
+    function calculateMaxWithdrawableCollateral(
+        address user
+    ) public view onlyModerator returns (uint256) {
         return _calculateMaxWithdrawableCollateral(user);
     }
 
-    function calculateMaxMintableDai(address user) public view onlyModerator returns (uint256 max) {
+    function calculateMaxMintableDai(
+        address user
+    ) public view onlyModerator returns (uint256 max) {
         return _calculateMaxMintableDai(user);
     }
 
@@ -409,8 +449,12 @@ contract CollateralSafekeep is AccessControl {
     function scanVaults() internal {
         uint256 userVaultArrayLength = userVaults.length;
         for (uint256 i = 0; i <= userVaultArrayLength; i++) {
-            userVaults[i].balanceInINR = userBalanceInInr(userVaults[i].userAddress);
-            userVaults[i].vaultHealth = calculateVaultHealth(userVaults[i].userAddress);
+            userVaults[i].balanceInINR = userBalanceInInr(
+                userVaults[i].userAddress
+            );
+            userVaults[i].vaultHealth = calculateVaultHealth(
+                userVaults[i].userAddress
+            );
             bool yesOrNo = liquidationCondition(userVaults[i].userAddress);
             if (yesOrNo = true) {
                 liquidateVault(userVaults[i].userAddress);
@@ -446,7 +490,9 @@ contract CollateralSafekeep is AccessControl {
         return d;
     }
 
-    function _amountInrToEth(uint256 amountINR) internal view returns (uint256) {
+    function _amountInrToEth(
+        uint256 amountINR
+    ) internal view returns (uint256) {
         int256 a = priceContract.ETHtoUSD();
         int256 b = priceContract.INRtoUSD();
         uint256 c = (uint256(b) * amountINR) / uint256(a);
@@ -459,7 +505,9 @@ contract CollateralSafekeep is AccessControl {
      *     @dev returns only the current balance that is stored in eth, by converting it to inr
      *     @return max type uint256 price in inr
      */
-    function _calculateMaxMintableDai(address user) internal view returns (uint256) {
+    function _calculateMaxMintableDai(
+        address user
+    ) internal view returns (uint256) {
         if (userVaults[userIndexes[user]].vaultHealth < 150) {
             return 0;
         }
@@ -471,14 +519,20 @@ contract CollateralSafekeep is AccessControl {
         return grand;
     }
 
-    function _calculateMaxWithdrawableCollateral(address user) internal view returns (uint256) {
+    function _calculateMaxWithdrawableCollateral(
+        address user
+    ) internal view returns (uint256) {
         uint256 collateral = userVaults[userIndexes[user]].balanceInINR;
         uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued;
         require(
-            (userVaults[userIndexes[user]].indaiIssued) * 1e8 < userVaults[userIndexes[user]].balanceInINR,
+            (userVaults[userIndexes[user]].indaiIssued) * 1e8 <
+                userVaults[userIndexes[user]].balanceInINR,
             "you are in debt!"
         );
-        require(userVaults[userIndexes[user]].vaultHealth > CIP, "you are in debt");
+        require(
+            userVaults[userIndexes[user]].vaultHealth > CIP,
+            "you are in debt"
+        );
         if (indaiIssued == 0) {
             return _amountInrToEth(collateral);
         } else {
