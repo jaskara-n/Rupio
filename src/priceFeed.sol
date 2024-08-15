@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {OracleLib, AggregatorV3Interface} from "./libraries/OracleLib.sol";
 
 contract PriceFeed {
+    using OracleLib for AggregatorV3Interface;
+
     AggregatorV3Interface internal dataFeed1;
     AggregatorV3Interface internal dataFeed2;
 
@@ -23,7 +25,7 @@ contract PriceFeed {
             /*uint timeStamp*/
             ,
             /*uint80 answeredInRound*/
-        ) = dataFeed1.latestRoundData();
+        ) = dataFeed1.staleCheckLatestRoundData();
         return answer;
     }
 
@@ -38,7 +40,7 @@ contract PriceFeed {
             /*uint timeStamp*/
             ,
             /*uint80 answeredInRound*/
-        ) = dataFeed2.latestRoundData();
+        ) = dataFeed2.staleCheckLatestRoundData();
         return answer2;
     }
 }

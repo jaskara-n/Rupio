@@ -10,10 +10,11 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PriceFeed} from "./PriceFeed.sol";
 import {Indai} from "./indai.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 // import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
-contract CollateralSafekeep is AccessControl {
+contract CollateralSafekeep is AccessControl, ReentrancyGuard {
     /**
      * VARIABLES***************
      */
