@@ -1,53 +1,53 @@
-///@title Indai algorithmic stablecoin
-///@author Jaskaran Singh
-///@notice Algorithmic Stablecoin Pegged to INR
-///@dev Integrated with Chainlink Pricefeeds, Openzeppelin contracts
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessManager} from "./AccessManager.sol";
 import {PriceFeed} from "./PriceFeed.sol";
 import {Indai} from "./indai.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
-// import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
-
-contract CollateralSafekeep is AccessControl, ReentrancyGuard {
-    /**
-     * VARIABLES***************
-     */
+/**
+ * @title CollateralSafekeep.
+ * @author Jaskaran Singh.
+ * @notice An algorithmic stablecoin just like DAI, but pegged to INR.
+ * @notice This contract integrates with chainlink pricefeeds and automation, to fetch INR conversion
+ * rates and to automate the process of checking the vault health for all users.
+ * @notice This contract is integrated with Indai access manager to manage access.
+ * @notice This contract is integrated with Indai token contract to mint and burn tokens.
+ * @notice This contract is integrated with Indai price feed to fetch INR conversion rates.
+ * @dev This contract works in Indai core, integrating with Indai price feed, access manager and token contract.
+ */
+contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
-    uint256 public immutable CIP; //Indai to collateral ratio
-    uint256 public immutable BASE_RISK_RATE; //Base rate debt on a vault
-    uint256 public immutable RISK_PREMIUM_RATE; //Currently only for ethereum, the rate associated with debt in a vault, with increasing time
+    uint256 public immutable CIP;
+    uint256 public immutable BASE_RISK_RATE;
+    uint256 public immutable RISK_PREMIUM_RATE;
     uint256 private lastTimeStamp;
-    Indai internal token; //For ERC20 functions of the system
-    PriceFeed internal priceContract;
-    int256 internal currentCollateralBalance; // total collateral balance of the whole contract in inr
+    int256 internal currentCollateralBalance; // Total collateral balance of the whole contract in inr.
     uint256 internal VAULT_ID;
+    AccessManager internal accessManager;
+    Indai internal token;
+    PriceFeed internal priceContract;
 
     /**
-     * STRUCTS*****************
+     * @notice A struct representing vault details for a user.
      */
     struct vault {
         uint256 vaultId;
         address userAddress;
-        uint256 balance; // In eth
-        uint256 balanceInINR; // In inr
+        uint256 balance; //In ETH.
+        uint256 balanceInINR; //In inr.
         uint256 indaiIssued;
-        uint256 vaultHealth; // vault health should be greater than 150 to avoid liquidation
+        uint256 vaultHealth; //Vault health should be greater than 150 to avoid liquidation.
     }
 
     /**
-     * ARRAYS**************
+     * @notice An array of user's vaults.
      */
     vault[] internal userVaults;
 
-    /**
-     * EVENTS*****************
-     */
     event thisIsARiskyVault(
         uint256 vaultId,
         address userAddress,
@@ -58,15 +58,13 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
     );
 
     /**
-     * MAPPINGS*****************
+     * @notice Mapping of user's address to their vault index.
      */
     mapping(address => uint256) public userIndexes;
 
     /**
-     * MODIFIERS**********
+     * @notice User should have a vault.
      */
-
-    //The user should have a vault
     modifier yesVault() {
         require(
             userIndexes[msg.sender] > 0,
@@ -75,36 +73,48 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
         _;
     }
 
-    //The user should have no vault
+    /**
+     * @notice User should not have a vault.
+     */
     modifier noVault() {
         require(userIndexes[msg.sender] == 0, "You already have a vault");
         _;
     }
 
+    /**
+     * @notice Msg.sender should be a moderator.
+     */
     modifier onlyModerator() {
         require(
-            hasRole(MODERATOR_ROLE, msg.sender),
+            accessManager.hasRole(MODERATOR_ROLE, msg.sender),
             "Must have MODERATOR_ROLE"
         );
         _;
     }
 
-    /**
-     * ERRORS**********
-     */
-    error upkeepNotNeeded();
-    error collateralSafekeep__userInDebt();
+    error CollateralSafekeep__UpkeepNotNeeded();
+    error CollateralSafekeep__UserInDebt();
+    error CollateralSafeKeep__ETHAmountMustBeGreaterThanZero();
 
+    /**
+     * @param _CIP Initial collateral to Indai token percentage (threshold).
+     * @param _BASE_RISK_RATE Base rate debt on a vault.
+     * @param _RISK_PREMIUM_RATE Currently only for ethereum, the rate associated with debt in a vault, with increasing time.
+     * @param _accessManager Address of Indai AccessManager.
+     * @param _indai Address of Indai token contract.
+     * @param _priceContract Address of Indai PriceFeed.
+     */
     constructor(
         // uint256 _timeInterval,
         uint256 _CIP,
         uint256 _BASE_RISK_RATE,
         uint256 _RISK_PREMIUM_RATE,
+        address _accessManager,
         address _indai,
         address _priceContract
     ) {
         VAULT_ID = 1;
-        _grantRole(MODERATOR_ROLE, msg.sender);
+        accessManager = AccessManager(_accessManager);
         token = Indai(_indai);
         priceContract = PriceFeed(_priceContract);
         lastTimeStamp = block.timestamp;
@@ -112,6 +122,7 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
         CIP = _CIP;
         BASE_RISK_RATE = _BASE_RISK_RATE;
         RISK_PREMIUM_RATE = _RISK_PREMIUM_RATE;
+        //Push an initial vault to the userVaults array.
         vault memory initialVault = vault({
             indaiIssued: 0,
             userAddress: address(0),
@@ -124,339 +135,195 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * PUBLIC FUNCTIONS***********
+     * @notice Create a new vault or add funds in an existing vault.
+     * @notice Public function.
+     * @notice User needs to send a msg.value with the functions, in ETH currently.
+     * @dev Msg.value must be in native decimals, in this case 1e18.
+     * @return vaultId Vault id of the user.
      */
-    function createOrUpdateVault() public payable {
-        require(msg.value > 0, "ETH amount must be greater than 0");
+    function createOrUpdateVault() public payable returns (uint256 vaultId) {
+        require(
+            msg.value > 0,
+            CollateralSafeKeep__ETHAmountMustBeGreaterThanZero()
+        );
+        //If the user has no vault previously.
         if (userIndexes[msg.sender] == 0) {
             vault memory newVault;
             newVault.balance = msg.value;
             newVault.userAddress = msg.sender;
             newVault.vaultId = VAULT_ID;
             newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
-            newVault.vaultHealth = collateralToInr(msg.value) * 100; //Full health for new vault
-            newVault.balanceInINR = collateralToInr(msg.value);
+            newVault.vaultHealth = _getAmountETHToINR(msg.value) * 100; //Full health for new vault
+            newVault.balanceInINR = _getAmountETHToINR(msg.value);
+            //Push the new vault to the userVaults array.
             userVaults.push(newVault);
-
+            //Update the mapping of address to vault id.
             userIndexes[msg.sender] = VAULT_ID;
+            //Increment global vault id counter.
             VAULT_ID = VAULT_ID + 1;
-        } else {
+        }
+        //If the user has a vault previously.
+        else {
+            //Update user balance in ETH and INR.
             userVaults[userIndexes[msg.sender]].balance += msg.value;
-            userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(
+            userVaults[userIndexes[msg.sender]]
+                .balanceInINR = _getAmountETHToINR(
                 userVaults[userIndexes[msg.sender]].balance
             );
+            //Update user vault health.
+            userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+                msg.sender
+            );
         }
+        return userVaults[userIndexes[msg.sender]].vaultId;
     }
 
     /**
-     * @notice creates a new vault for a user
+     * @notice Mint indai based on collateral provided.
+     * @notice Public function.
+     * @notice User needs to have a vault first.
+     * @notice One indai is issued for every ruppee of collateral(in ETH, converted to INR).
+     * @notice User cannot mint if vault health is lower than 150 percent of CIP.
+     * @param amount Amount of Indai to be minted, in no decimals, example 50, should be less than CIP cross.
+     * @return max Max amount of Indai that can be minted.
      */
     function mintIndai(uint256 amount) public yesVault returns (uint256) {
-        require(amount > 0, "enter valid amount");
+        require(
+            amount > 0,
+            CollateralSafeKeep__ETHAmountMustBeGreaterThanZero()
+        );
+        //Update vault health first.
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+            msg.sender
+        );
         require(
             userVaults[userIndexes[msg.sender]].vaultHealth > CIP,
-            "you are in debt!"
+            CollateralSafekeep__UserInDebt()
         );
-        uint256 max = _calculateMaxMintableDai(msg.sender);
+        //Calculate the maximum number of indai tokens that a user can mint based on vault health.
+        uint256 max = _getMaxMintableIndai(msg.sender);
         require(amount < max, "enter amount less than CIP cross");
+        //Mint indai tokens to the user.
         token.mint(msg.sender, amount);
+        //Update user's indai issued and vault health in array UserVaults.
         userVaults[userIndexes[msg.sender]].indaiIssued += amount;
-        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
             msg.sender
         );
         return max;
     }
 
     /**
-     * @notice This allows user to mint indai based on their collateral in the vault
-     *     @notice User cannot mint if vault health is lower than 150 percent
-     *     @notice One indai is issued for every ruppee of collateral(in eth, converted to inr)
-     *     @dev This function is the algorithmic minting of indai, one indai is minted for every rupee of collateral
-     *     @dev Updates the token amount in the user's vault
-     *     @custom:misc User can use this function to mint dai after depositing the collateral in vault
-     */
-
-    /**
-     * @notice This adds nore collateral in eth to the user's existing vault
+     * @notice User can withdraw if any excess collateral than 150 percent of indai issued.
+     * @notice Public function.
+     * @param amount Amount of ETH to withdraw from vault.
      */
     function withdrawFromVault(uint256 amount) public payable yesVault {
-        require(amount > 0, "Withdraw amount should be greater than 0");
+        //Update vault health first.
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+            msg.sender
+        );
+        require(
+            amount > 0,
+            CollateralSafeKeep__ETHAmountMustBeGreaterThanZero()
+        );
         require(
             userVaults[userIndexes[msg.sender]].balance >= amount,
             "insufficient balance in vault"
         );
-        require(_calculateVaultHealth(msg.sender) > 150, "Clear your debt!");
-        // require(
-        //     liquidationCondition(msg.sender) == true,
-        //     "Clear your debt in the vault!"
-        // );
-        uint256 max = _calculateMaxWithdrawableCollateral(msg.sender);
-        require(amount <= max, "you will go into debt!");
+        require(
+            userVaults[userIndexes[msg.sender]].vaultHealth > 150,
+            CollateralSafekeep__UserInDebt()
+        );
+        //Calculate the maximum amount of ETH that the user can withdraw from vault.
+        uint256 max = _getMaxWithdrawableCollateral(msg.sender);
+        require(amount <= max, CollateralSafekeep__UserInDebt());
+        //Transfer the amount ETH into calling user's address.
         payable(msg.sender).transfer(amount);
+        //Update balance in ETH and INR, and vault health in array UserVaults.
         userVaults[userIndexes[msg.sender]].balance -= amount;
-        userVaults[userIndexes[msg.sender]].balanceInINR = collateralToInr(
+        userVaults[userIndexes[msg.sender]].balanceInINR = _getAmountETHToINR(
             userVaults[userIndexes[msg.sender]].balance
         );
-        userVaults[userIndexes[msg.sender]].vaultHealth = _calculateVaultHealth(
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
             msg.sender
         );
     }
 
     /**
-     * @notice User can withdraw if any excess collateral than 150 percent of indai issued
-     *     @dev only allow user to withdraw if no debt in vault
+     * @notice Burn Indai and relieve collateral in ETH from the vault.
+     * @notice Public function.
+     * @notice User must have a vault first.
+     * @param amount Amount of indai to burn.
      */
     function burnIndaiAndRelieveCollateral(uint256 amount) public yesVault {
-        require(userVaults[userIndexes[msg.sender]].indaiIssued > 0);
-        require(userVaults[userIndexes[msg.sender]].indaiIssued >= amount);
+        //Update vault health first.
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+            msg.sender
+        );
+        require(
+            userVaults[userIndexes[msg.sender]].indaiIssued > 0,
+            "No indai issued yet."
+        );
+        require(
+            userVaults[userIndexes[msg.sender]].indaiIssued >= amount,
+            "Less amount of indai issued"
+        );
+        //Burn indai tokens from user's vault.
         token.burnFrom(msg.sender, amount);
+        //Update user's indai issued and vault health in array UserVaults.
         userVaults[userIndexes[msg.sender]].indaiIssued -= amount;
-        _calculateVaultHealth(msg.sender);
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+            msg.sender
+        );
     }
 
     /**
-     * PUBLIC GETTER FUNCTIONS************
+     * @notice Chainlink automation function to check if the conditions are met to perform upkeep.
+     * @notice Public function.
+     * @return upkeepNeeded Bool indicating if upkeep is needed, based on specific conditions.
      */
-    function getCIP() public view returns (uint256) {
-        return CIP;
-    }
-
-    /**
-     * @notice collateral to indai percentage defined by the DAO.
-     *     @dev public getter function.
-     *     @return uint256
-     */
-    function getBASE_RISK_RATE() public view returns (uint256) {
-        return BASE_RISK_RATE;
-    }
-
-    /**
-     * @notice base risk rate on all collateral types defined by the DAO.
-     *     @dev public getter function.
-     *     @return uint256
-     */
-    function getRISK_PREMIUM_RATE() public view returns (uint256) {
-        return RISK_PREMIUM_RATE;
-    }
-
-    /**
-     * @notice risk premium rate on specific collateral type defined by the DAO.
-     *     @dev public getter function.
-     *     @return uint256
-     */
-    function vaultDetailsForTheUser()
-        public
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    )
+        external
         view
-        yesVault
-        returns (
-            // yesVault
-            vault memory
-        )
+        override
+        returns (bool upkeepNeeded, bytes memory /* performData */)
     {
-        // vault memory tempVault;
-        // tempVault.vaultId = userVaults[userIndexes[msg.sender]].vaultId;
-        // tempVault.userAddress = msg.sender;
-        // tempVault.balance = userVaults[userIndexes[msg.sender]].balance;
-        // tempVault.balanceInINR = userVaults[userIndexes[msg.sender]]
-        //     .balanceInINR;
-        // tempVault.indaiIssued = userVaults[userIndexes[msg.sender]].indaiIssued;
-        // tempVault.vaultHealth = userVaults[userIndexes[msg.sender]].vaultHealth;
-        // return tempVault;
-        return userVaults[userIndexes[msg.sender]];
+        upkeepNeeded = true;
     }
 
     /**
-     * MOD ONLY FUNCTIONS************
+     * @notice Chainlink automation function to perform upkeep.
+     * @notice Public function.
+     * @dev In this case, it is scanning all the vaults in database and updating vault health for them.
+     * @dev Needed because we cannot tranditionally loop over all the vaults to update vault health.
      */
-    function grantModeratorRole(address account) public onlyModerator {
-        grantRole(MODERATOR_ROLE, account);
-    }
-
-    function calculateVaultHealth(
-        address _user
-    ) public onlyModerator returns (uint256) {
-        uint256 vaultHealth = _calculateVaultHealth(_user);
-        return vaultHealth;
-    }
-
-    function liquidateVault(address _vaultAddress) public onlyModerator {}
-
-    /**
-     * @notice liquidates vaults that get too risky.
-     *     @dev this function is public in case we need to manually liquidate a vault
-     *     @return
-     */
-
-    /**
-     * MOD ONLY GETTER FUNCTIONS************
-     */
-    function getUserCollateralBalance(
-        address _address
-    ) public view onlyModerator returns (uint256) {
-        return userVaults[userIndexes[_address]].balance;
+    function performUpkeep(bytes calldata /* performData */) external override {
+        scanVaults();
     }
 
     /**
-     * @return Returns the user's balance in eth
+     * @notice Scans all the vaults in database and updates vault health for them.
+     * @notice Public function.
+     * @dev Needed because we cannot tranditionally loop over all the vaults to update vault health due to gas costs.
+     * @dev Called by chainlink automation or can be called by moderators or good keepers of this protocol.
      */
-    function getCurrentVaultId() public view onlyModerator returns (uint256) {
-        //can be used to get total no of vaults
-        //vault id starts from 1
-        return VAULT_ID;
-    }
-
-    function getTotalCollateralPrice()
-        public
-        view
-        onlyModerator
-        returns (int256)
-    {
-        return currentCollateralBalance;
-    }
-
-    /**
-     * @return  total collateral balance of the whole contract in eth
-     */
-
-    //returns total database of vaults in array of structs
-    function getTotalVaultDetails()
-        public
-        view
-        onlyModerator
-        returns (vault[] memory)
-    {
-        return userVaults;
-    }
-
-    function userBalanceInInr(
-        address _address
-    ) public view onlyModerator returns (uint256) {
-        uint256 bal = userVaults[userIndexes[_address]].balance; // in 18 decimals cuz eth
-
-        return collateralToInr(bal);
-    }
-
-    function amountInrToEth(
-        uint256 amountINR
-    ) public view onlyModerator returns (uint256) {
-        return _amountInrToEth(amountINR);
-    }
-
-    function calculateMaxWithdrawableCollateral(
-        address user
-    ) public view onlyModerator returns (uint256) {
-        return _calculateMaxWithdrawableCollateral(user);
-    }
-
-    function calculateMaxMintableDai(
-        address user
-    ) public view onlyModerator returns (uint256 max) {
-        return _calculateMaxMintableDai(user);
-    }
-
-    /**
-     * @notice User can burn their indai tokens to repay their debt
-     *     @dev only allow user to withdraw if no debt in vault
-     */
-
-    // function checkUpkeep(
-    //     bytes memory /*performData*/
-    // ) public view override returns (bool upkeepNeeded, bytes memory) {
-    //     bool isTimePassed = (block.timestamp - lastTimeStamp) > timeInterval;
-    //     bool hasBalance = address(this).balance > 0;
-    //     upkeepNeeded = (isTimePassed && hasBalance);
-    // }
-
-    // /**
-    //     @notice Chainlink function that checks if time interval has passed so that contract can perform the perform upkeep function
-    //     @dev conditions for upkeepNeeded to be true:
-    //     1. time interval has to be passed
-    //     2. there should be atleast someone deposited some eth into the vault
-    //     3. our keepers subscription should be funded with link
-    // */
-
-    // function performUpkeep(bytes memory /*performData*/) external override {
-    //     (bool upkeepNeeded, ) = checkUpkeep("");
-    //     if (!upkeepNeeded) {
-    //         revert upkeepNotNeeded();
-    //     } else {
-    //         (
-    //             ,
-    //             /* uint80 roundID */
-    //             int256 answer1 /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
-    //             ,
-    //             ,
-
-    //         ) = priceFeed_ETHtoUSD.latestRoundData();
-
-    //         (
-    //             ,
-    //             /* uint80 roundID */
-    //             int256 answer2 /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
-    //             ,
-    //             ,
-
-    //         ) = priceFeed_INRtoUSD.latestRoundData();
-
-    //         currentCollateralBalance =
-    //             (int256(address(this).balance) * answer1) /
-    //             (answer2);
-
-    //         //function to scan each user vault for ratio (returned by enternal oracle)
-    //         scanVaults();
-    //     }
-    // }
-
-    // /**
-    //     @notice This function runs periodically and scans through every vault to check vault health.
-    //     @dev Chainlink keeper function that looks for upkeepNeeded to return true and then perform the performUpkeep
-    //     function to get price feed for vaults at regular intervals of time, and liquidated vaults.
-    //     @dev Calls scanVaults() directly and other functions indirectly.
-    // */
-
-    /**
-     * INTERNAL FUNCTIONS************
-     */
-    function _calculateVaultHealth(address _user) internal returns (uint256) {
-        uint256 collateral = userVaults[userIndexes[_user]].balanceInINR; //in inr, 8 decimals
-
-        uint256 indaiIssued = userVaults[userIndexes[_user]].indaiIssued; //in uint256 token quantity,can say 1 token = 1 inr
-        if (indaiIssued == 0) {
-            return collateral * 100;
-        } else {
-            uint256 _vaultHealth = ((collateral / (indaiIssued * 1e8)) * 100);
-            userVaults[userIndexes[_user]].vaultHealth = _vaultHealth;
-            return _vaultHealth;
-        }
-    }
-
-    /**
-     * @notice calculates vault health of a users vault at a particular state
-     *     @dev emits an event if vault health is less than 150
-     *     @dev Vault health in the array of user data is updated in this function
-     *     @dev this function is called by scanvaults time to time
-     *     @dev this function can be used both as a getter(to check vault health of user) and setter(update vault health of user in array)
-     *     @dev this function is only for the contract, public getter function is the another one.
-     */
-    function liquidationCondition(address user) internal returns (bool) {
-        uint256 current = calculateVaultHealth(user);
-        if (current > CIP) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    function scanVaults() internal {
+    function scanVaults() public {
+        //Get userVaults array length.
         uint256 userVaultArrayLength = userVaults.length;
-        for (uint256 i = 0; i <= userVaultArrayLength; i++) {
-            userVaults[i].balanceInINR = userBalanceInInr(
+        //Start a for loop to update INR balances and vault health.
+        for (uint256 i = 0; i < userVaultArrayLength; i++) {
+            userVaults[i].balanceInINR = getUserBalanceInINR(
                 userVaults[i].userAddress
             );
-            userVaults[i].vaultHealth = calculateVaultHealth(
+            userVaults[i].vaultHealth = getVaultHealth(
                 userVaults[i].userAddress
             );
-            bool yesOrNo = liquidationCondition(userVaults[i].userAddress);
+            bool yesOrNo = _getIsLiquidationCondition(
+                userVaults[i].userAddress
+            );
             if (yesOrNo = true) {
                 liquidateVault(userVaults[i].userAddress);
                 emit thisIsARiskyVault(
@@ -472,26 +339,218 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice This function liquidates vaults that get too risky
-     *     @dev emits event of the risky vaults
-     *     @dev this function is periodically called by chainlink keepers
-     *     @dev this function updates the user's collateral balance in inr in the vault periodically
+     * @notice Liquidates vaults that get too risky.
+     * @dev Moderator only funciton.
      */
+    function liquidateVault(address _vaultAddress) public onlyModerator {}
 
     /**
-     * INTERNAL GETTER FUNCTIONS************
+     * @notice Public getter function.
+     * @return uint256 Collateral to indai percentage threshold defined by the DAO.
      */
-    function collateralToInr(uint256 balance) internal view returns (uint256) {
+    function getCIP() public view returns (uint256) {
+        return CIP;
+    }
+
+    /**
+     * @notice Public getter function.
+     * @return uint256 Base Risk Rate on all collateral types defined by the DAO.
+     */
+    function getBASE_RISK_RATE() public view returns (uint256) {
+        return BASE_RISK_RATE;
+    }
+
+    /**
+     * @notice Public getter function.
+     * @return uint256 Risk Premium Rate on specific collateral type defined by the DAO.
+     */
+    function getRISK_PREMIUM_RATE() public view returns (uint256) {
+        return RISK_PREMIUM_RATE;
+    }
+
+    /**
+     * @notice Public getter function.
+     * @notice User must have a vault first.
+     * @return vault Struct indicating user's vault details.
+     */
+    function getVaultDetailsForTheUser()
+        public
+        view
+        yesVault
+        returns (vault memory)
+    {
+        return userVaults[userIndexes[msg.sender]];
+    }
+
+    /**
+     * @notice Calculates the vault health of an address based on current collateral and indai issued.
+     * @notice Moderator only getter function.
+     * @param _user Address of user.
+     * @return uint256 Vault health.
+     */
+    function getVaultHealth(
+        address _user /*onlyModerator*/
+    ) public view returns (uint256) {
+        return _getVaultHealth(_user);
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @param _address Address of the user
+     * @return uint256 Collateral balance in ETH in native decimals, in this case 1e18.
+     */
+    function getUserCollateralBalance(
+        address _address /*onlyModerator*/
+    ) public view returns (uint256) {
+        return userVaults[userIndexes[_address]].balance;
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @dev Can be used to get total number of vaults in the system.
+     * @dev Vault Id starts from 1.
+     * @return uint256 Current global counter of vault ids.
+     */
+    function getCurrentVaultId()
+        public
+        view
+        returns (/*onlyModerator*/ uint256)
+    {
+        return VAULT_ID;
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @return int256 Total collateral balance of the whole contract in ETH in native decimals, in this case 1e18
+     */
+    function getTotalCollateralPrice()
+        public
+        view
+        returns (
+            /*onlyModerator*/
+            int256
+        )
+    {
+        return currentCollateralBalance;
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @return vault[] Total database of vaults in array of structs userVaults.
+     */
+    function getTotalVaultDetails()
+        public
+        view
+        returns (
+            /*onlyModerator*/
+            vault[] memory
+        )
+    {
+        return userVaults;
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @param _address Address of the user.
+     * @return uint256 User's current collateral balance in INR in native decimals, in this case 1e8.
+     */
+    function getUserBalanceInINR(
+        address _address /*onlyModerator*/
+    ) public view returns (uint256) {
+        uint256 bal = userVaults[userIndexes[_address]].balance; // In 18 decimals cuz ETH.
+
+        return _getAmountETHToINR(bal);
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @param amountINR Amount of INR to be converted to ETH, in native decimals in this case 1e8.
+     * @return uint256 Amount of ETH converted to INR, in native decimals in this case 1e18.
+     */
+    function getAmountINRToETH(
+        uint256 amountINR /*onlyModerator*/
+    ) public view returns (uint256) {
+        return _getAmountINRToETH(amountINR);
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @param user Address of the user.
+     * @return uint256 Max amount of collateral that can be withdrawn by a user at current state in native decimals, in this case 1e18.
+     */
+    function getMaxWithdrawableCollateral(
+        address user /*onlyModerator*/
+    ) public view returns (uint256) {
+        return _getMaxWithdrawableCollateral(user);
+    }
+
+    /**
+     * @notice Moderator only getter function.
+     * @param user Address of the user.
+     * @return uint256 Maximum amount of indai that can be minted by a user at current state in no decimals.
+     */
+    function getMaxMintableIndai(
+        address user /*onlyModerator*/
+    ) public view returns (uint256) {
+        return _getMaxMintableIndai(user);
+    }
+
+    /**
+     * @notice Internal getter function.
+     * @param _user Address of the user.
+     * @return uint256 Vault health of the user at current state.
+     */
+    function _getVaultHealth(address _user) internal view returns (uint256) {
+        uint256 collateral = userVaults[userIndexes[_user]].balanceInINR; //In INR, 8 decimals.
+        uint256 indaiIssued = userVaults[userIndexes[_user]].indaiIssued; //In uint256 token quantity,can say 1 token = 1 inr.
+        if (indaiIssued == 0) {
+            return collateral * 100;
+        } else {
+            uint256 _vaultHealth = ((collateral / (indaiIssued * 1e8)) * 100);
+            return _vaultHealth;
+        }
+    }
+
+    /**
+     * @notice Internal getter function.
+     * @dev Liquidation condition is met when vault health is less than CIP.
+     * @param user Address of the user.
+     * @return bool Is liquidation condition met for the user.
+     */
+    function _getIsLiquidationCondition(
+        address user
+    ) internal view returns (bool) {
+        uint256 current = getVaultHealth(user);
+        if (current > CIP) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * @notice Internal getter function.
+     * @param amountETH Amount of ETH to be converted to INR, in native decimals in this case 1e18.
+     * @return uint256 Amount ETH converted to INR, in native decimals in this case 1e8.
+     */
+    function _getAmountETHToINR(
+        uint256 amountETH
+    ) internal view returns (uint256) {
         int256 a = priceContract.ETHtoUSD(); // in 8 decimals cuz usd
 
         int256 b = priceContract.INRtoUSD(); // in 8 decimals cuz usd
-        uint256 c = (balance * uint256(a)) / uint256(b);
+        uint256 c = (amountETH * uint256(a)) / uint256(b);
 
         uint256 d = (c / 1e10);
         return d;
     }
 
-    function _amountInrToEth(
+    /**
+     * @notice Internal getter function.
+     * @param amountINR Amount of INR to be converted to ETH, in native decimals in this case 1e8.
+     * @return uint256 Amount INR converted to ETH, in native decimals in this case 1e18.
+     */
+    function _getAmountINRToETH(
         uint256 amountINR
     ) internal view returns (uint256) {
         int256 a = priceContract.ETHtoUSD();
@@ -502,25 +561,30 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice returns current vault balance of a user in inr
-     *     @dev returns only the current balance that is stored in eth, by converting it to inr
-     *     @return max type uint256 price in inr
+     * @notice Internal getter function.
+     * @param user Address of the user.
+     * @return uint256 Maximum amount of indai that can be minted by a user at current state in no decimals.
      */
-    function _calculateMaxMintableDai(
+    function _getMaxMintableIndai(
         address user
     ) internal view returns (uint256) {
         if (userVaults[userIndexes[user]].vaultHealth < 150) {
             return 0;
         }
         uint256 bal = userVaults[userIndexes[user]].balance; //amount, can say 1 token = 1 inr
-        uint256 _userBalanceInInr = collateralToInr(bal); // in 8 decimals
+        uint256 _getUserBalanceInINR = _getAmountETHToINR(bal); // in 8 decimals
         uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued; //amount, can say 1 token = 1 inr
-        uint256 totalAval = (_userBalanceInInr * 2) / (3 * 1e8);
+        uint256 totalAval = (_getUserBalanceInINR * 2) / (3 * 1e8);
         uint256 grand = totalAval - indaiIssued;
         return grand;
     }
 
-    function _calculateMaxWithdrawableCollateral(
+    /**
+     * @notice Internal getter function.
+     * @param user Address of the user.
+     * @return uint256 Max amount of collateral that can be withdrawn by a user at current state in native decimals, in this case 1e18.
+     */
+    function _getMaxWithdrawableCollateral(
         address user
     ) internal view returns (uint256) {
         uint256 collateral = userVaults[userIndexes[user]].balanceInINR;
@@ -535,21 +599,16 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
             "you are in debt"
         );
         if (indaiIssued == 0) {
-            return _amountInrToEth(collateral);
+            return _getAmountINRToETH(collateral);
         } else {
             uint256 a = (indaiIssued * 3) / 2;
             uint256 b = a * 1e8;
             uint256 c = collateral - b;
 
-            uint256 d = _amountInrToEth(c);
+            uint256 d = _getAmountINRToETH(c);
             return d;
         }
     }
-
-    /**
-     * @notice calculates max amount of indai that can be minted by user at given vault state
-     *     @return uint256 type max mintable indai
-     */
 }
 
 //to implement a new contract for  oracle (kind of for loop)
@@ -568,6 +627,3 @@ contract CollateralSafekeep is AccessControl, ReentrancyGuard {
 
 //To add logic to withdraw amount after cutting the fee
 //Or to let repay indai+fee(stability fee)
-
-/**
- */

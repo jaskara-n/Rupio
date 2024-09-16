@@ -37,7 +37,7 @@ contract HelperConfig is Script {
     }
 
     function getOptimismMainnetConfig() public view returns (NetworkConfig memory) {
-        console.log("forking optimism mainnet now....");
+        console.log("Wotking on optimism mainnet now....");
         NetworkConfig memory mainnetConfig = NetworkConfig({
             priceFeed: vm.envAddress("OPTIMISM_MAINNET_INRUSD_PRICEFEED_ADDRESS"),
             priceFeed2: vm.envAddress("OPTIMISM_MAINNET_ETHUSD_PRICEFEED_ADDRESS"),
@@ -46,6 +46,18 @@ contract HelperConfig is Script {
             cip: CIP
         });
         return mainnetConfig;
+    }
+
+    function getOptimismSepoliaConfig() public view returns (NetworkConfig memory) {
+        console.log("Working on optimism sepolia now....");
+        NetworkConfig memory sepoliaConfig = NetworkConfig({
+            priceFeed: address(0),
+            priceFeed2: vm.envAddress("OPTIMISM_SEPOLIA_ETHUSD_PRICEFEED_ADDRESS"),
+            baseRiskRate: BASE_RISK_RATE,
+            riskPremiumRate: RISK_PREMIUM_RATE,
+            cip: CIP
+        });
+        return sepoliaConfig;
     }
 
     function getAnvilConfig() public returns (NetworkConfig memory) {

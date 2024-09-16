@@ -8,6 +8,7 @@ import {HelperConfig} from "../../../../script/HelperConfig.s.sol";
 import {CollateralSafekeep} from "../../../../src/CollateralSafekeep.sol";
 import {Indai} from "../../../../src/indai.sol";
 import {PriceFeed} from "../../../../src/PriceFeed.sol";
+import {AccessManager} from "../../../../src/AccessManager.sol";
 
 //getter view functions must never revert
 // value of minted indai must be always less than
@@ -17,18 +18,21 @@ contract InvariantsTest is StdInvariant, Test {
     Handler handler;
     HelperConfig helperconfig;
     CollateralSafekeep csk;
+    AccessManager accessManager;
     Indai indai;
     PriceFeed pricefeed;
 
     function setUp() external {
         helperconfig = new HelperConfig();
         vm.startPrank(owner);
-        indai = new Indai();
+        accessManager = new AccessManager();
+        indai = new Indai(address(accessManager));
         pricefeed = new PriceFeed(helperconfig.getAnvilConfig().priceFeed, helperconfig.getAnvilConfig().priceFeed2);
         csk = new CollateralSafekeep(
             helperconfig.getAnvilConfig().cip,
             helperconfig.getAnvilConfig().baseRiskRate,
             helperconfig.getAnvilConfig().riskPremiumRate,
+            address(accessManager),
             address(indai),
             address(pricefeed)
         );

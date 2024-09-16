@@ -3,9 +3,14 @@ pragma solidity ^0.8.20;
 
 import {OracleLib, AggregatorV3Interface} from "./libraries/OracleLib.sol";
 
+/**
+ * @title PriceFeed.
+ * @author Jaskaran Singh.
+ * @notice Contract for fetching INR to USD and ETH to USD prices for the INDAI CollateralSafekeep contract.
+ * @notice This contract is integrated with chainlink price feeds to fetch the latest prices.
+ */
 contract PriceFeed {
     using OracleLib for AggregatorV3Interface;
-
     AggregatorV3Interface internal dataFeed1;
     AggregatorV3Interface internal dataFeed2;
 

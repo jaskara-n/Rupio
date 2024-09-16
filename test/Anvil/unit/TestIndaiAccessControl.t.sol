@@ -22,7 +22,7 @@ contract IndaiAccessControlTest is StdCheats, Test, Script {
         vm.stopPrank();
     }
 
-    function testOwnerRoleGranted() public {
+    function testOwnerRoleGranted() public view {
         bool mybool = accesscontrol.hasRole(OWNER, owner);
         bool mybool2 = accesscontrol.hasRole(MODERATOR_ROLE, owner);
         bool mybool3 = accesscontrol.hasRole(MINTER_ROLE, owner);
@@ -33,7 +33,7 @@ contract IndaiAccessControlTest is StdCheats, Test, Script {
         assertEq(accesscontrol.getRoleAdmin(MINTER_ROLE), MODERATOR_ROLE);
     }
 
-    function testOwnerGrantsModRole() public {
+    function testOwnerGrantsModRole() public view {
         bool mybool = accesscontrol.hasRole(MODERATOR_ROLE, moderator1);
         assertEq(mybool, true);
     }

@@ -10,6 +10,8 @@ remappings = ['@aave/core-v3/=lib/protocol-v3',
             '@uniswap/v3-core=node_modules/@uniswap/v3-core',
             '@chainlink/contracts=lib/chainlink-brownie-contracts/contracts',
     ]
+[etherscan]
+optimism = { key = "${OPTIMISM_ETHERSCAN_API_KEY}" }
 
 [Invariant]
 runs = 128

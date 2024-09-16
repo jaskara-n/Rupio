@@ -35,7 +35,7 @@ contract Handler is Test {
         }
         address sender = usersWithVault[_addressSeed % usersWithVault.length];
         vm.prank(owner);
-        uint256 max = csk.calculateMaxMintableDai(sender);
+        uint256 max = csk.getMaxMintableIndai(sender);
         if (max == 0) {
             return;
         }

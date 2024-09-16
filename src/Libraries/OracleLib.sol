@@ -3,17 +3,16 @@ pragma solidity ^0.8.24;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-/*
- * @title OracleLib
- * @author Jaskaran Singh
+/**
+ * @title OracleLib.
+ * @author Jaskaran Singh.
  * @notice This library is used to check the Chainlink Oracle for stale data.
  * If a price is stale, functions will revert, and render the CollateralSafeKeep unusable - this is by design.
- *
- *
  * So if the Chainlink network explodes and you have a lot of money locked in the protocol... too bad.
  */
 library OracleLib {
     error OracleLib__StalePrice();
+
     uint256 private constant TIMEOUT = 3 hours;
 
     function staleCheckLatestRoundData(
