@@ -1,0 +1,34 @@
+import type { Metadata } from "next";
+import { Open_Sans } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/navbar";
+
+const inter = Open_Sans({ subsets: ["latin"] });
+
+import { headers } from "next/headers"; // added
+import ContextProvider from "@/components/context";
+
+export const metadata: Metadata = {
+  title: "AppKit Example App",
+  description: "Powered by WalletConnect",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const cookies = headers().get("cookie");
+
+  return (
+    <html lang="en">
+      <body className={"${inter.className} relative"}>
+        <ContextProvider cookies={cookies}>
+          <Navbar />
+
+          {children}
+        </ContextProvider>
+      </body>
+    </html>
+  );
+}
