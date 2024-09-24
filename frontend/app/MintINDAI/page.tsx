@@ -2,15 +2,12 @@
 
 import {
   type BaseError,
-  useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
 import CollateralSafekeep from "@/abi/CollateralSafekeep.json";
-import { parseEther } from "viem";
 function LockETH() {
   const { data: hash, isPending, writeContract, error } = useWriteContract();
-  const { address, isConnected } = useAccount();
 
   const csk = {
     address: "0x5F0f545F044628b8DF84F1933887eC6aa9E9449D",
@@ -21,7 +18,7 @@ function LockETH() {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const INDAIAmount = formData.get("INDAIAmount") as string;
-    const result = await writeContract({
+    await writeContract({
       ...csk,
       functionName: "mintIndai",
 

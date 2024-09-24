@@ -1,6 +1,6 @@
 "use client";
-import { useAccount, useReadContracts } from "wagmi";
-import { BaseError, useReadContract } from "wagmi";
+import { useAccount } from "wagmi";
+import { useReadContract } from "wagmi";
 import CollateralSafekeep from "@/abi/CollateralSafekeep.json";
 
 function Dashboard() {
@@ -9,7 +9,7 @@ function Dashboard() {
     abi: CollateralSafekeep,
   } as const;
 
-  const { isConnected, address } = useAccount();
+  const { address } = useAccount();
   // const { data, isLoading, isError, error } = useReadContract({
   //   abi: CollateralSafekeep,
   //   address: cskAddress,
