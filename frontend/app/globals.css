@@ -11,6 +11,7 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --secondary: #f4f728;
   }
 }
 
@@ -42,4 +43,16 @@ h1 {
 h2 {
   font-size: 20px;
   font-weight: bolder;
+}
+
+h3 {
+  font-size: 25px;
+}
+
+w3m-button::part(button) {
+  background-color: var(--secondary);
+}
+
+.text-secondary {
+  color: var(--secondary);
 }

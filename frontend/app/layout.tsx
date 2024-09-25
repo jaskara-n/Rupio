@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-// import { Open_Sans } from "next/font/google";
+import { Open_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navbar";
 
-// const inter = Open_Sans({ subsets: ["latin"] });
+const sans = Open_Sans({ subsets: ["latin"] });
 
 import { headers } from "next/headers"; // added
 import ContextProvider from "@/components/context";
 
 export const metadata: Metadata = {
-  title: "AppKit Example App",
-  description: "Powered by WalletConnect",
+  title: "Indai Stablecoin",
+  description: "Stablecoin pegged to INR",
 };
 
 export default function RootLayout({
@@ -21,11 +21,10 @@ export default function RootLayout({
   const cookies = headers().get("cookie");
 
   return (
-    <html lang="en">
-      <body className={"${inter.className} relative"}>
+    <html lang="en" className={sans.className}>
+      <body className={" relative"}>
         <ContextProvider cookies={cookies}>
           <Navbar />
-
           {children}
         </ContextProvider>
       </body>
