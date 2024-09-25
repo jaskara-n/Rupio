@@ -1,4 +1,3 @@
-import { useState } from "react";
 import React from "react";
 import ConditionalNavOptions from "./conditionalNavOptions";
 import Link from "next/link";

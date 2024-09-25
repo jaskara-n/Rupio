@@ -1,17 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { useRouter } from "next/navigation";
 import { Hamburger } from "./hamburgerog";
 import Link from "next/link";
 function ConditionalNavOptions() {
-  const [isOpen, setIsOpen] = useState(false);
   const { isConnected } = useAccount();
   const [connectionStatus, setConnectionStatus] = useState(false);
-
-  const handleClick = () => {
-    setIsOpen(!isOpen);
-  };
 
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = () => {
@@ -24,7 +18,6 @@ function ConditionalNavOptions() {
   useEffect(() => {
     setConnectionStatus(isConnected);
   }, [isConnected]);
-  const { push } = useRouter();
 
   return (
     <div>
