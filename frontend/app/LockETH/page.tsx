@@ -36,30 +36,77 @@ function LockETH() {
     });
 
   return (
-    <div className="h-screen p-10 flex flex-col items-center justify-center">
-      <h2>Create a new vault or add ETH to an existing vault.</h2>
+    <div className="h-full flex flex-row justify-center items-center gap-8">
+      <div className="flex flex-col items-center justify-center gap-8">
+        <div className="flex flex-col border border-[var(--secondary)] rounded-xl p-6">
+          <h2>Create a new vault or add ETH to an existing vault.</h2>
+          <form className="mt-4 flex justify-center " onSubmit={submit}>
+            <input
+              className="p-2 border border-white rounded-xl bg-black"
+              name="ETHAmount"
+              placeholder="Amount ETH"
+              required
+            />
+            <button
+              disabled={isPending}
+              type="submit"
+              className="ml-4 p-2 bg-red-500 text-white rounded-md"
+            >
+              {isPending ? "Confirming..." : "Lock ETH"}
+            </button>
+            {isConfirming && <div>Waiting for confirmation...</div>}
+            {isConfirmed && <div>Transaction confirmed.</div>}
+            {error && (
+              <div>
+                Error: {(error as BaseError).shortMessage || error.message}
+              </div>
+            )}
+            {hash && <div>Transaction Hash: {hash}</div>}
+          </form>
+        </div>
+        <div className="flex flex-col border border-[var(--secondary)] rounded-xl p-6">
+          <h2 className="px-5">
+            Withdraw underlying ETH from vault if no debt.
+          </h2>
 
-      <form className="mt-4 " onSubmit={submit}>
-        <input
-          className="p-2 border border-white rounded-xl bg-black"
-          name="ETHAmount"
-          placeholder="Eg: 0.01, 123, etc"
-          required
-        />
-        <button
-          disabled={isPending}
-          type="submit"
-          className="ml-4 p-2 bg-red-500 text-white rounded-md"
-        >
-          {isPending ? "Confirming..." : "Lock ETH"}
-        </button>
-        {isConfirming && <div>Waiting for confirmation...</div>}
-        {isConfirmed && <div>Transaction confirmed.</div>}
-        {error && (
-          <div>Error: {(error as BaseError).shortMessage || error.message}</div>
-        )}
-        {hash && <div>Transaction Hash: {hash}</div>}
-      </form>
+          <form className="mt-4 flex justify-center " onSubmit={submit}>
+            <input
+              className="p-2 border border-white rounded-xl bg-black"
+              name="ETHAmount"
+              placeholder="Amount ETH"
+              required
+            />
+            <button
+              disabled={isPending}
+              type="submit"
+              className="ml-4 p-2 bg-red-500 text-white rounded-md"
+            >
+              {isPending ? "Confirming..." : "Lock ETH"}
+            </button>
+            {isConfirming && <div>Waiting for confirmation...</div>}
+            {isConfirmed && <div>Transaction confirmed.</div>}
+            {error && (
+              <div>
+                Error: {(error as BaseError).shortMessage || error.message}
+              </div>
+            )}
+            {hash && <div>Transaction Hash: {hash}</div>}
+          </form>
+        </div>
+      </div>
+      <div className="flex flex-col justify-center items-center p-8 bg-[var(--secondary)] rounded-3xl text-black space-y-2">
+        <h3>Current Vault Status</h3>
+        <div className="flex flex-row justify-between w-full">
+          Indai:<p>{500}</p>
+        </div>
+
+        <div className="flex flex-row justify-between w-full">
+          Max Mintable Indai:<p>{500}</p>
+        </div>
+        <div className="flex flex-row justify-between w-full ">
+          Max Withdrawable Collateral:<p>{500}</p>
+        </div>
+      </div>
     </div>
   );
 }

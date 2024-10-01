@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #000000;
-  --foreground: #ffffff;
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -49,10 +44,47 @@ h3 {
   font-size: 25px;
 }
 
+h4 {
+  font-size: 30px;
+  font-weight: 500;
+}
+
 w3m-button::part(button) {
   background-color: var(--secondary);
 }
 
 .text-secondary {
   color: var(--secondary);
+}
+
+button {
+  padding: 10px 20px;
+  border-radius: 16px;
+  font-size: large;
+  font-weight: 550;
+  border: none;
+  cursor: pointer;
+
+  &.primary {
+    background-color: var(--background);
+    color: var(--foreground);
+    outline: 2px solid var(--foreground);
+    transition: background-color 0.5s, color 0.5s, outline 0.5s;
+    &:hover {
+      background-color: var(--foreground);
+      color: var(--background);
+    }
+  }
+
+  &.secondary {
+    background-color: var(--secondary);
+    color: var(--background);
+    transition: background-color 0.5s, color 0.5s, outline 0.5s;
+
+    &:hover {
+      background-color: var(--background);
+      color: var(--foreground);
+      outline: 2px solid var(--foreground);
+    }
+  }
 }

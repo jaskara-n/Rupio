@@ -22,10 +22,10 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={sans.className}>
-      <body className={" relative"}>
+      <body className={"relative"}>
         <ContextProvider cookies={cookies}>
           <Navbar />
-          {children}
+          <div className="h-screen pt-16 px-10 pb-20">{children}</div>
         </ContextProvider>
       </body>
     </html>

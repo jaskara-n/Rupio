@@ -20,13 +20,13 @@ export function Hamburger(props: HamburgerProps) {
     <button
       onClick={handleClick}
       type="button"
-      className={`w-8 h-8 flex bg-transparent justify-around flex-col flex-wrap z-10 cursor-pointer${
+      className={`w-8 h-8  flex bg-transparent justify-around flex-col flex-wrap z-10 cursor-pointer${
         isOpen ? "" : ""
       }`}
     >
       <div
         className={` block w-8 h-[0.15rem] rounded transition-all origin-[1px] ${
-          isOpen ? "rotate-45 bg-black" : "bg-white rotate-0"
+          isOpen ? "mb-8 rotate-45 bg-black fixed" : "bg-white rotate-0"
         }`}
       />
       <div
@@ -36,7 +36,7 @@ export function Hamburger(props: HamburgerProps) {
       />
       <div
         className={` block w-8 h-[0.15rem] rounded transition-all origin-[1px] ${
-          isOpen ? "rotate-[-45deg] bg-black" : "rotate-0 bg-white"
+          isOpen ? " rotate-[-45deg] bg-black" : "rotate-0 bg-white"
         }`}
       />
     </button>
