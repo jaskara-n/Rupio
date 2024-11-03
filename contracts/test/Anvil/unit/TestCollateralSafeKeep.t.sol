@@ -6,7 +6,7 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {Script} from "forge-std/Script.sol";
 import {PriceFeed} from "../../../src/PriceFeed.sol";
 import {HelperConfig} from "../../../script/HelperConfig.s.sol";
-import {Indai} from "../../../src/indai.sol";
+import {Rupio} from "../../../src/Rupio.sol";
 import {CollateralSafekeep} from "../../../src/CollateralSafekeep.sol";
 import {AccessManager} from "../../../src/AccessManager.sol";
 
@@ -15,7 +15,7 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
     PriceFeed priceFeed;
     HelperConfig helperConfig;
     CollateralSafekeep csk;
-    Indai indai;
+    Rupio indai;
     address user = address(124);
     address user2 = address(125);
     address user3 = address(123);
@@ -38,7 +38,7 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
 
         vm.startPrank(user);
         accessManager = new AccessManager();
-        indai = new Indai(address(accessManager));
+        indai = new Rupio(address(accessManager));
 
         csk = new CollateralSafekeep(
             helperConfig.getAnvilConfig().cip,

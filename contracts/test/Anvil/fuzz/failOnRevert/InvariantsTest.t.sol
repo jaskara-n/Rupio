@@ -6,7 +6,7 @@ import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {Handler} from "./Handler.t.sol";
 import {HelperConfig} from "../../../../script/HelperConfig.s.sol";
 import {CollateralSafekeep} from "../../../../src/CollateralSafekeep.sol";
-import {Indai} from "../../../../src/indai.sol";
+import {Rupio} from "../../../../src/Rupio.sol";
 import {PriceFeed} from "../../../../src/PriceFeed.sol";
 import {AccessManager} from "../../../../src/AccessManager.sol";
 
@@ -19,15 +19,18 @@ contract InvariantsTest is StdInvariant, Test {
     HelperConfig helperconfig;
     CollateralSafekeep csk;
     AccessManager accessManager;
-    Indai indai;
+    Rupio indai;
     PriceFeed pricefeed;
 
     function setUp() external {
         helperconfig = new HelperConfig();
         vm.startPrank(owner);
         accessManager = new AccessManager();
-        indai = new Indai(address(accessManager));
-        pricefeed = new PriceFeed(helperconfig.getAnvilConfig().priceFeed, helperconfig.getAnvilConfig().priceFeed2);
+        indai = new Rupio(address(accessManager));
+        pricefeed = new PriceFeed(
+            helperconfig.getAnvilConfig().priceFeed,
+            helperconfig.getAnvilConfig().priceFeed2
+        );
         csk = new CollateralSafekeep(
             helperconfig.getAnvilConfig().cip,
             helperconfig.getAnvilConfig().baseRiskRate,

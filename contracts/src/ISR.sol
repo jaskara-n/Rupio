@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./Indai.sol";
+import "./Rupio.sol";
 import {AccessManager} from "./AccessManager.sol";
 
 contract ISR {
@@ -17,7 +17,7 @@ contract ISR {
         uint256 lastRewardClaimedAt;
     }
 
-    Indai public indaiToken;
+    Rupio public indaiToken;
     AccessManager public accessManager;
     uint256 lockPeriod;
     uint256 savingsRate; //Indai savings rate
@@ -25,9 +25,13 @@ contract ISR {
     uint256 public totalDeposited;
     uint256 public totalInvestersCount;
 
-    constructor(uint256 _savingsRate, address _indaiToken, address _accessManager) {
+    constructor(
+        uint256 _savingsRate,
+        address _indaiToken,
+        address _accessManager
+    ) {
         admin = msg.sender;
-        indaiToken = Indai(_indaiToken);
+        indaiToken = Rupio(_indaiToken);
         savingsRate = _savingsRate;
         accessManager = AccessManager(_accessManager);
     }
@@ -48,9 +52,25 @@ contract ISR {
     }
 
     function lockIndai(uint256 _amount) public {
-        require(indaiToken.balanceOf(msg.sender) >= _amount, "You dont Have a balance");
-        require(indaiToken.allowance(msg.sender, address(this)) >= _amount, "Not sufficient allowance");
-        User memory user = User(_amount, block.timestamp, 0, false, 0, 0, 0, 0, 0);
+        require(
+            indaiToken.balanceOf(msg.sender) >= _amount,
+            "You dont Have a balance"
+        );
+        require(
+            indaiToken.allowance(msg.sender, address(this)) >= _amount,
+            "Not sufficient allowance"
+        );
+        User memory user = User(
+            _amount,
+            block.timestamp,
+            0,
+            false,
+            0,
+            0,
+            0,
+            0,
+            0
+        );
         totalDeposited += _amount;
         totalInvestersCount++;
         users[msg.sender] = user;
@@ -61,7 +81,10 @@ contract ISR {
         User memory user = users[msg.sender];
         require(user.isUserWithdrawn == false, "Your balance is zero");
         uint256 userLockPeriod = user.userDepositedAt + lockPeriod;
-        require(block.timestamp >= userLockPeriod, "withdraw your token after the lock period ends");
+        require(
+            block.timestamp >= userLockPeriod,
+            "withdraw your token after the lock period ends"
+        );
         user.userBalance = user.userBalance - _amount;
         user.userWithdrawn = block.timestamp;
         user.lastWithdrawnAmount = _amount;
@@ -74,8 +97,10 @@ contract ISR {
 
     function calculateInterest(address user) internal returns (uint256) {
         User memory currentUser = users[user];
-        uint256 duration = (block.timestamp - currentUser.userDepositedAt) / 86400;
-        uint256 value = (currentUser.userBalance * savingsRate * duration) / 100;
+        uint256 duration = (block.timestamp - currentUser.userDepositedAt) /
+            86400;
+        uint256 value = (currentUser.userBalance * savingsRate * duration) /
+            100;
         currentUser.rewardAmount = value / 365;
         return currentUser.rewardAmount;
     }

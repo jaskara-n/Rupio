@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessManager} from "./AccessManager.sol";
 import {PriceFeed} from "./PriceFeed.sol";
-import {Indai} from "./indai.sol";
+import {Rupio} from "./Rupio.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
@@ -28,7 +28,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     int256 internal currentCollateralBalance; // Total collateral balance of the whole contract in inr.
     uint256 internal VAULT_ID;
     AccessManager internal accessManager;
-    Indai internal token;
+    Rupio internal token;
     PriceFeed internal priceContract;
 
     /**
@@ -115,7 +115,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     ) {
         VAULT_ID = 1;
         accessManager = AccessManager(_accessManager);
-        token = Indai(_indai);
+        token = Rupio(_indai);
         priceContract = PriceFeed(_priceContract);
         lastTimeStamp = block.timestamp;
         /* timeInterval= timeInterval;*/

@@ -3,6 +3,8 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AccessManager} from "./AccessManager.sol";
+import {OFT} from "@layerzerolabs/oft-evm/contracts/OFT.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Indai.
@@ -10,11 +12,15 @@ import {AccessManager} from "./AccessManager.sol";
  * @notice A simple ERC20 token for the INDAI stablecoin, pegegd to 1 INR.
  * @notice Integrated with Indai access manager to manage access.
  */
-contract Indai is ERC20 {
+contract Rupio is OFT, Ownable {
     AccessManager internal accessManager;
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    constructor(address _accessManager) ERC20("INDAI", "IND") {
+    constructor(
+        address _lzEndpoint,
+        address _delegate,
+        address _accessManager
+    ) OFT("Rupio", "RUP", _lzEndpoint, _delegate) Ownable(_delegate) {
         accessManager = AccessManager(_accessManager);
     }
 

@@ -7,7 +7,7 @@ import {console} from "forge-std/Test.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {AccessManager} from "../src/AccessManager.sol";
 import {PriceFeed} from "../src/priceFeed.sol";
-import {Indai} from "../src/indai.sol";
+import {Rupio} from "../src/Rupio.sol";
 import {CollateralSafekeep} from "../src/CollateralSafekeep.sol";
 import {ISR} from "../src/ISR.sol";
 import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
@@ -16,7 +16,7 @@ contract Deploy is Script {
     HelperConfig helperconfig;
     AccessManager accessmanager;
     PriceFeed pricefeed;
-    Indai indai;
+    Rupio indai;
     CollateralSafekeep csk;
     ISR isr;
 
@@ -29,7 +29,7 @@ contract Deploy is Script {
             address(mock),
             helperconfig.getBaseSepoliaConfig().priceFeed2
         );
-        indai = new Indai(address(accessmanager));
+        indai = new Rupio(address(accessmanager));
         csk = new CollateralSafekeep(
             helperconfig.getBaseSepoliaConfig().cip,
             helperconfig.getBaseSepoliaConfig().baseRiskRate,

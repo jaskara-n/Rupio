@@ -3,19 +3,19 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {CollateralSafekeep} from "../../../../src/CollateralSafekeep.sol";
-import {Indai} from "../../../../src/indai.sol";
+import {Rupio} from "../../../../src/Rupio.sol";
 import {HelperConfig} from "../../../../script/HelperConfig.s.sol";
 
 //narrows down the way we do function calls in fuzz invariant testing
 contract Handler is Test {
     address owner;
     CollateralSafekeep csk;
-    Indai indai;
+    Rupio indai;
     address[] usersWithVault;
 
     constructor(address _csk, address _indai, address _owner) {
         csk = CollateralSafekeep(_csk);
-        indai = Indai(_indai);
+        indai = Rupio(_indai);
         owner = _owner;
     }
 
