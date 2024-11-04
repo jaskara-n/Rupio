@@ -35,12 +35,12 @@ contract Handler is Test {
         }
         address sender = usersWithVault[_addressSeed % usersWithVault.length];
         vm.prank(owner);
-        uint256 max = csk.getMaxMintableIndai(sender);
+        uint256 max = csk.getMaxMintableRupio(sender);
         if (max == 0) {
             return;
         }
         _amount = bound(_amount, 1, max - 1);
         vm.prank(sender);
-        csk.mintIndai(_amount);
+        csk.mintRupio(_amount);
     }
 }

@@ -13,7 +13,10 @@ contract PriceFeedTest is StdCheats, Test, Script {
 
     function setUp() public {
         helperConfig = new HelperConfig();
-        priceFeed = new PriceFeed(helperConfig.getAnvilConfig().priceFeed, helperConfig.getAnvilConfig().priceFeed2);
+        priceFeed = new PriceFeed(
+            helperConfig.getAnvilConfig().inrToUsdFeed,
+            helperConfig.getAnvilConfig().ethToUsdFeed
+        );
     }
 
     function testGetPrice() public {

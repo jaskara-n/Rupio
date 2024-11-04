@@ -20,7 +20,8 @@ contract PriceFeedTest is StdCheats, Test, Script {
         vm.selectFork(optimismFork);
 
         priceFeed = new PriceFeed(
-            helperConfig.getOptimismMainnetConfig().priceFeed, helperConfig.getOptimismMainnetConfig().priceFeed2
+            helperConfig.getOptimismMainnetConfig().inrToUsdFeed,
+            helperConfig.getOptimismMainnetConfig().ethToUsdFeed
         );
     }
 

@@ -6,7 +6,7 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {Script} from "forge-std/Script.sol";
 import {AccessManager} from "../../../src/AccessManager.sol";
 
-contract IndaiAccessControlTest is StdCheats, Test, Script {
+contract RupioAccessControlTest is StdCheats, Test, Script {
     bytes32 public constant OWNER = keccak256("OWNER");
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");

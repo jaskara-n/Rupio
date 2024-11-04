@@ -14,14 +14,14 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/autom
  * @notice An algorithmic stablecoin just like DAI, but pegged to INR.
  * @notice This contract integrates with chainlink pricefeeds and automation, to fetch INR conversion
  * rates and to automate the process of checking the vault health for all users.
- * @notice This contract is integrated with Indai access manager to manage access.
- * @notice This contract is integrated with Indai token contract to mint and burn tokens.
- * @notice This contract is integrated with Indai price feed to fetch INR conversion rates.
- * @dev This contract works in Indai core, integrating with Indai price feed, access manager and token contract.
+ * @notice This contract is integrated with RupioDao access manager to manage access.
+ * @notice This contract is integrated with Rupio token contract to mint and burn tokens.
+ * @notice This contract is integrated with RupioDao price feed to fetch INR conversion rates.
+ * @dev This contract works in RupioDao core, integrating with RupioDao price feed, access manager and token contract.
  */
 contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
-    uint256 public immutable CIP;
+    uint256 public immutable CRP;
     uint256 public immutable BASE_RISK_RATE;
     uint256 public immutable RISK_PREMIUM_RATE;
     uint256 private lastTimeStamp;
@@ -39,7 +39,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         address userAddress;
         uint256 balance; //In ETH.
         uint256 balanceInINR; //In inr.
-        uint256 indaiIssued;
+        uint256 rupioIssued;
         uint256 vaultHealth; //Vault health should be greater than 150 to avoid liquidation.
     }
 
@@ -53,7 +53,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         address userAddress,
         uint256 balance,
         uint256 balanceInINR,
-        uint256 indaiIssued,
+        uint256 rupioIssued,
         uint256 vaultHealth
     );
 
@@ -97,34 +97,34 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     error CollateralSafeKeep__ETHAmountMustBeGreaterThanZero();
 
     /**
-     * @param _CIP Initial collateral to Indai token percentage (threshold).
+     * @param _CRP Initial collateral to Rupio token percentage (threshold).
      * @param _BASE_RISK_RATE Base rate debt on a vault.
      * @param _RISK_PREMIUM_RATE Currently only for ethereum, the rate associated with debt in a vault, with increasing time.
-     * @param _accessManager Address of Indai AccessManager.
-     * @param _indai Address of Indai token contract.
-     * @param _priceContract Address of Indai PriceFeed.
+     * @param _accessManager Address of RupioDao AccessManager.
+     * @param _rupio Address of Rupio token contract.
+     * @param _priceContract Address of RupioDao PriceFeed.
      */
     constructor(
         // uint256 _timeInterval,
-        uint256 _CIP,
+        uint256 _CRP,
         uint256 _BASE_RISK_RATE,
         uint256 _RISK_PREMIUM_RATE,
         address _accessManager,
-        address _indai,
+        address _rupio,
         address _priceContract
     ) {
         VAULT_ID = 1;
         accessManager = AccessManager(_accessManager);
-        token = Rupio(_indai);
+        token = Rupio(_rupio);
         priceContract = PriceFeed(_priceContract);
         lastTimeStamp = block.timestamp;
         /* timeInterval= timeInterval;*/
-        CIP = _CIP;
+        CRP = _CRP;
         BASE_RISK_RATE = _BASE_RISK_RATE;
         RISK_PREMIUM_RATE = _RISK_PREMIUM_RATE;
         //Push an initial vault to the userVaults array.
         vault memory initialVault = vault({
-            indaiIssued: 0,
+            rupioIssued: 0,
             userAddress: address(0),
             vaultId: 0,
             balance: 0,
@@ -152,7 +152,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
             newVault.balance = msg.value;
             newVault.userAddress = msg.sender;
             newVault.vaultId = VAULT_ID;
-            newVault.indaiIssued = 0; //Initially it will be 0 for a new vault
+            newVault.rupioIssued = 0; //Initially it will be 0 for a new vault
             newVault.vaultHealth = _getAmountETHToINR(msg.value) * 100; //Full health for new vault
             newVault.balanceInINR = _getAmountETHToINR(msg.value);
             //Push the new vault to the userVaults array.
@@ -179,15 +179,15 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     }
 
     /**
-     * @notice Mint indai based on collateral provided.
+     * @notice Mint rupio based on collateral provided.
      * @notice Public function.
      * @notice User needs to have a vault first.
-     * @notice One indai is issued for every ruppee of collateral(in ETH, converted to INR).
-     * @notice User cannot mint if vault health is lower than 150 percent of CIP.
-     * @param amount Amount of Indai to be minted, in no decimals, example 50, should be less than CIP cross.
-     * @return max Max amount of Indai that can be minted.
+     * @notice One rupio is issued for every ruppee of collateral(in ETH, converted to INR).
+     * @notice User cannot mint if vault health is lower than 150 percent of CRP.
+     * @param amount Amount of rupio to be minted, in no decimals, example 50, should be less than CRP cross.
+     * @return max Max amount of rupio that can be minted.
      */
-    function mintIndai(uint256 amount) public yesVault returns (uint256) {
+    function mintRupio(uint256 amount) public yesVault returns (uint256) {
         require(
             amount > 0,
             CollateralSafeKeep__ETHAmountMustBeGreaterThanZero()
@@ -197,16 +197,16 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
             msg.sender
         );
         require(
-            userVaults[userIndexes[msg.sender]].vaultHealth > CIP,
+            userVaults[userIndexes[msg.sender]].vaultHealth > CRP,
             CollateralSafekeep__UserInDebt()
         );
-        //Calculate the maximum number of indai tokens that a user can mint based on vault health.
-        uint256 max = _getMaxMintableIndai(msg.sender);
-        require(amount < max, "enter amount less than CIP cross");
-        //Mint indai tokens to the user.
+        //Calculate the maximum number of rupio tokens that a user can mint based on vault health.
+        uint256 max = _getMaxMintableRupio(msg.sender);
+        require(amount < max, "enter amount less than CRP cross");
+        //Mint rupio tokens to the user.
         token.mint(msg.sender, amount);
-        //Update user's indai issued and vault health in array UserVaults.
-        userVaults[userIndexes[msg.sender]].indaiIssued += amount;
+        //Update user's rupio issued and vault health in array UserVaults.
+        userVaults[userIndexes[msg.sender]].rupioIssued += amount;
         userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
             msg.sender
         );
@@ -214,7 +214,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     }
 
     /**
-     * @notice User can withdraw if any excess collateral than 150 percent of indai issued.
+     * @notice User can withdraw if any excess collateral than 150 percent of rupio issued.
      * @notice Public function.
      * @param amount Amount of ETH to withdraw from vault.
      */
@@ -251,28 +251,28 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     }
 
     /**
-     * @notice Burn Indai and relieve collateral in ETH from the vault.
+     * @notice Burn Rupio and relieve collateral in ETH from the vault.
      * @notice Public function.
      * @notice User must have a vault first.
-     * @param amount Amount of indai to burn.
+     * @param amount Amount of rupio to burn.
      */
-    function burnIndaiAndRelieveCollateral(uint256 amount) public yesVault {
+    function burnRupioAndRelieveCollateral(uint256 amount) public yesVault {
         //Update vault health first.
         userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
             msg.sender
         );
         require(
-            userVaults[userIndexes[msg.sender]].indaiIssued > 0,
-            "No indai issued yet."
+            userVaults[userIndexes[msg.sender]].rupioIssued > 0,
+            "No rupio issued yet."
         );
         require(
-            userVaults[userIndexes[msg.sender]].indaiIssued >= amount,
-            "Less amount of indai issued"
+            userVaults[userIndexes[msg.sender]].rupioIssued >= amount,
+            "Less amount of rupio issued"
         );
-        //Burn indai tokens from user's vault.
+        //Burn rupio tokens from user's vault.
         token.burnFrom(msg.sender, amount);
-        //Update user's indai issued and vault health in array UserVaults.
-        userVaults[userIndexes[msg.sender]].indaiIssued -= amount;
+        //Update user's rupio issued and vault health in array UserVaults.
+        userVaults[userIndexes[msg.sender]].rupioIssued -= amount;
         userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
             msg.sender
         );
@@ -331,7 +331,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
                     userVaults[i].userAddress,
                     userVaults[i].balance,
                     userVaults[i].balanceInINR,
-                    userVaults[i].indaiIssued,
+                    userVaults[i].rupioIssued,
                     userVaults[i].vaultHealth
                 );
             }
@@ -346,10 +346,10 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
 
     /**
      * @notice Public getter function.
-     * @return uint256 Collateral to indai percentage threshold defined by the DAO.
+     * @return uint256 Collateral to rupio percentage threshold defined by the DAO.
      */
-    function getCIP() public view returns (uint256) {
-        return CIP;
+    function getCRP() public view returns (uint256) {
+        return CRP;
     }
 
     /**
@@ -383,7 +383,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     }
 
     /**
-     * @notice Calculates the vault health of an address based on current collateral and indai issued.
+     * @notice Calculates the vault health of an address based on current collateral and rupio issued.
      * @notice Moderator only getter function.
      * @param _user Address of user.
      * @return uint256 Vault health.
@@ -487,12 +487,12 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     /**
      * @notice Moderator only getter function.
      * @param user Address of the user.
-     * @return uint256 Maximum amount of indai that can be minted by a user at current state in no decimals.
+     * @return uint256 Maximum amount of rupio that can be minted by a user at current state in no decimals.
      */
-    function getMaxMintableIndai(
+    function getMaxMintableRupio(
         address user /*onlyModerator*/
     ) public view returns (uint256) {
-        return _getMaxMintableIndai(user);
+        return _getMaxMintableRupio(user);
     }
 
     /**
@@ -502,18 +502,18 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
      */
     function _getVaultHealth(address _user) internal view returns (uint256) {
         uint256 collateral = userVaults[userIndexes[_user]].balanceInINR; //In INR, 8 decimals.
-        uint256 indaiIssued = userVaults[userIndexes[_user]].indaiIssued; //In uint256 token quantity,can say 1 token = 1 inr.
-        if (indaiIssued == 0) {
+        uint256 rupioIssued = userVaults[userIndexes[_user]].rupioIssued; //In uint256 token quantity,can say 1 token = 1 inr.
+        if (rupioIssued == 0) {
             return collateral * 100;
         } else {
-            uint256 _vaultHealth = ((collateral / (indaiIssued * 1e8)) * 100);
+            uint256 _vaultHealth = ((collateral / (rupioIssued * 1e8)) * 100);
             return _vaultHealth;
         }
     }
 
     /**
      * @notice Internal getter function.
-     * @dev Liquidation condition is met when vault health is less than CIP.
+     * @dev Liquidation condition is met when vault health is less than CRP.
      * @param user Address of the user.
      * @return bool Is liquidation condition met for the user.
      */
@@ -521,7 +521,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         address user
     ) internal view returns (bool) {
         uint256 current = getVaultHealth(user);
-        if (current > CIP) {
+        if (current > CRP) {
             return false;
         } else {
             return true;
@@ -563,9 +563,9 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
     /**
      * @notice Internal getter function.
      * @param user Address of the user.
-     * @return uint256 Maximum amount of indai that can be minted by a user at current state in no decimals.
+     * @return uint256 Maximum amount of rupio that can be minted by a user at current state in no decimals.
      */
-    function _getMaxMintableIndai(
+    function _getMaxMintableRupio(
         address user
     ) internal view returns (uint256) {
         if (userVaults[userIndexes[user]].vaultHealth < 150) {
@@ -573,9 +573,9 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         }
         uint256 bal = userVaults[userIndexes[user]].balance; //amount, can say 1 token = 1 inr
         uint256 _getUserBalanceInINR = _getAmountETHToINR(bal); // in 8 decimals
-        uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued; //amount, can say 1 token = 1 inr
+        uint256 rupioIssued = userVaults[userIndexes[user]].rupioIssued; //amount, can say 1 token = 1 inr
         uint256 totalAval = (_getUserBalanceInINR * 2) / (3 * 1e8);
-        uint256 grand = totalAval - indaiIssued;
+        uint256 grand = totalAval - rupioIssued;
         return grand;
     }
 
@@ -588,20 +588,20 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         address user
     ) internal view returns (uint256) {
         uint256 collateral = userVaults[userIndexes[user]].balanceInINR;
-        uint256 indaiIssued = userVaults[userIndexes[user]].indaiIssued;
+        uint256 rupioIssued = userVaults[userIndexes[user]].rupioIssued;
         require(
-            (userVaults[userIndexes[user]].indaiIssued) * 1e8 <
+            (userVaults[userIndexes[user]].rupioIssued) * 1e8 <
                 userVaults[userIndexes[user]].balanceInINR,
             "you are in debt!"
         );
         require(
-            userVaults[userIndexes[user]].vaultHealth > CIP,
+            userVaults[userIndexes[user]].vaultHealth > CRP,
             "you are in debt"
         );
-        if (indaiIssued == 0) {
+        if (rupioIssued == 0) {
             return _getAmountINRToETH(collateral);
         } else {
-            uint256 a = (indaiIssued * 3) / 2;
+            uint256 a = (rupioIssued * 3) / 2;
             uint256 b = a * 1e8;
             uint256 c = collateral - b;
 
@@ -610,20 +610,3 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         }
     }
 }
-
-//to implement a new contract for  oracle (kind of for loop)
-
-// If MKR holders govern the Maker Protocol successfully, the Protocol
-// will accrue Surplus Dai as Dai holders pay Stability Fees. On the other
-// hand, if liquidations are inadequate, then the Protocol will accrue Bad
-// Debt. Once this Surplus Dai / Bad Debt amount hits a threshold, as
-// voted by MKR holders, then the Protocol will discharge Surplus Dai /
-// Bad Debt through the Flapper / Flopper smart contract by buying and
-// burning / minting and selling MKR, respectively.
-
-// Risk Premium Rate - This rate is used to calculate the risk premium fee that accrues on debt in a Vault. A
-// unique Risk Premium Rate is assigned to each collateral type. (e.g. 2.5%/year for Collateral A, 3.5%/year for
-// Collateral B, etc)
-
-//To add logic to withdraw amount after cutting the fee
-//Or to let repay indai+fee(stability fee)

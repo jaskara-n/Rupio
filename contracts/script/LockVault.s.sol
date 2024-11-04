@@ -9,15 +9,15 @@ import {AccessManager} from "../src/AccessManager.sol";
 import {PriceFeed} from "../src/priceFeed.sol";
 import {Rupio} from "../src/Rupio.sol";
 import {CollateralSafekeep} from "../src/CollateralSafekeep.sol";
-import {ISR} from "../src/ISR.sol";
+import {RupioSavingsContract} from "../src/RupioSavingsContract.sol";
 
 contract LockVault is Script {
     HelperConfig helperconfig;
     AccessManager accessmanager;
     PriceFeed pricefeed;
-    Rupio indai;
+    RupioSavingsContract indai;
     CollateralSafekeep csk;
-    ISR isr;
+    RupioSavingsContract isr;
 
     function run() external {
         helperconfig = new HelperConfig();
