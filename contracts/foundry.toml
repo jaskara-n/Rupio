@@ -12,6 +12,8 @@ remappings = ['@aave/core-v3/=lib/protocol-v3',
             '@layerzerolabs/oft-evm/=lib/devtools/packages/oft-evm/',
             '@layerzerolabs/oapp-evm/=lib/devtools/packages/oapp-evm/',
             '@layerzerolabs/lz-evm-protocol-v2/=lib/layerzero-v2/packages/layerzero-v2/evm/protocol',
+            '@solidity-bytes-utils=lib/solidity-bytes-utils',
+
     ]
 [etherscan]
 optimism = { key = "${OPTIMISM_ETHERSCAN_API_KEY}" }
