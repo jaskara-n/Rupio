@@ -12,7 +12,7 @@ import {CollateralSafekeep} from "../src/CollateralSafekeep.sol";
 import {RupioSavingsContract} from "../src/RupioSavingsContract.sol";
 import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 
-contract Deploy is Script {
+contract DeployHomeChain is Script {
     HelperConfig helperconfig;
     AccessManager accessmanager;
     PriceFeed pricefeed;

@@ -16,7 +16,7 @@ remappings = ['@aave/core-v3/=lib/protocol-v3',
 
     ]
 [etherscan]
-optimism = { key = "${OPTIMISM_ETHERSCAN_API_KEY}" }
+
 
 [Invariant]
 runs = 128

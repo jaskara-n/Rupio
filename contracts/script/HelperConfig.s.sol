@@ -61,8 +61,8 @@ contract HelperConfig is Script {
             baseRiskRate: BASE_RISK_RATE,
             riskPremiumRate: RISK_PREMIUM_RATE,
             cip: CIP,
-            chainEid: uint32(10232),
-            lzEndpoint: 0x55370E0fBB5f5b8dAeD978BA1c075a499eB107B8
+            chainEid: uint32(40232),
+            lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f
         });
         return sepoliaConfig;
     }
@@ -75,8 +75,8 @@ contract HelperConfig is Script {
             baseRiskRate: BASE_RISK_RATE,
             riskPremiumRate: RISK_PREMIUM_RATE,
             cip: CIP,
-            chainEid: uint32(10245),
-            lzEndpoint: 0x55370E0fBB5f5b8dAeD978BA1c075a499eB107B8
+            chainEid: uint32(40245),
+            lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f
         });
         return baseConfig;
     }
@@ -89,8 +89,8 @@ contract HelperConfig is Script {
             baseRiskRate: BASE_RISK_RATE,
             riskPremiumRate: RISK_PREMIUM_RATE,
             cip: CIP,
-            chainEid: uint32(10161),
-            lzEndpoint: 0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1
+            chainEid: uint32(40161),
+            lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f
         });
         return ethConfig;
     }
