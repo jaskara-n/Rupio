@@ -67,7 +67,7 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
         vm.stopPrank();
         vm.startPrank(user3);
         csk.createOrUpdateVault{value: 1 ether}();
-        csk.mintRupio(5000);
+        csk.mintRupio(5000, uint32(0));
         csk.createOrUpdateVault{value: 1 ether}();
         CollateralSafekeep.vault memory tempVault2 = csk
             .getVaultDetailsForTheUser();
@@ -128,13 +128,13 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
         assertGt(max, 100000);
         assertLt(max, 200000);
         vm.prank(user5);
-        csk.mintRupio(10000);
+        csk.mintRupio(10000, uint32(0));
         vm.prank(user);
         uint256 max2 = csk.getMaxMintableRupio(user5);
         assertGt(max2, 0);
         assertLt(max2, max);
         vm.prank(user5);
-        csk.mintRupio(15000);
+        csk.mintRupio(15000, uint32(0));
         vm.prank(user);
         uint256 max3 = csk.getMaxMintableRupio(user5);
         assertGt(max3, 0);
@@ -147,17 +147,17 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
         vm.startPrank(user3);
         csk.createOrUpdateVault{value: 1 ether}();
         vm.expectRevert(bytes("enter amount less than CRP cross"));
-        csk.mintRupio(275513);
+        csk.mintRupio(275513, uint32(0));
         CollateralSafekeep.vault memory tempVault2 = csk
             .getVaultDetailsForTheUser();
-        uint256 max = csk.mintRupio(3000);
+        uint256 max = csk.mintRupio(3000, uint32(0));
         assertGt(max, 0);
         CollateralSafekeep.vault memory tempVault = csk
             .getVaultDetailsForTheUser();
         assertEq(tempVault.rupioIssued, 3000);
         assertLt(tempVault.vaultHealth, tempVault2.vaultHealth);
         assertEq(indai.balanceOf(user3), 3000);
-        uint256 max2 = csk.mintRupio(10000);
+        uint256 max2 = csk.mintRupio(10000, uint32(0));
         assertGt(max2, 0);
         CollateralSafekeep.vault memory tempVault3 = csk
             .getVaultDetailsForTheUser();
@@ -182,13 +182,13 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
         assertGt(max, 0.9 ether);
         assertLt(max, 1.1 ether);
         vm.prank(user2);
-        csk.mintRupio(5000);
+        csk.mintRupio(5000, uint32(0));
         vm.prank(user);
         uint256 max2 = csk.getMaxWithdrawableCollateral(user2);
         assertGt(max2, 0);
         assertLt(max2, max);
         vm.prank(user2);
-        csk.mintRupio(10000);
+        csk.mintRupio(10000, uint32(0));
         vm.prank(user);
         uint256 max3 = csk.getMaxWithdrawableCollateral(user2);
         assertGt(max3, 0);
@@ -206,7 +206,7 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
 
         CollateralSafekeep.vault memory tempVault2 = csk
             .getVaultDetailsForTheUser();
-        csk.mintRupio(10000);
+        csk.mintRupio(10000, uint32(0));
         CollateralSafekeep.vault memory tempVault3 = csk
             .getVaultDetailsForTheUser();
         assertLt(tempVault2.balance, tempVault.balance);
@@ -218,7 +218,7 @@ contract CollateralSafekeepTest is StdCheats, Test, Script {
     function testBurnIndaiAndRelieveCollateral() public {
         vm.startPrank(user3);
         csk.createOrUpdateVault{value: 0.5 ether}();
-        csk.mintRupio(5000);
+        csk.mintRupio(5000, uint32(0));
         assertEq(indai.balanceOf(user3), 5000);
         csk.burnRupioAndRelieveCollateral(5000);
         assertEq(indai.balanceOf(user3), 0);

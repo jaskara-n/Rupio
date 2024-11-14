@@ -7,6 +7,9 @@ import {PriceFeed} from "./PriceFeed.sol";
 import {Rupio} from "./Rupio.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
+import {SendParam, OFTReceipt} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
+import {OptionsBuilder} from "./Libraries/OptionsBuilder.sol";
+import {MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
 /**
  * @title CollateralSafekeep.
@@ -20,6 +23,7 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/autom
  * @dev This contract works in RupioDao core, integrating with RupioDao price feed, access manager and token contract.
  */
 contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
+    using OptionsBuilder for bytes;
     bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     uint256 public immutable CRP;
     uint256 public immutable BASE_RISK_RATE;
@@ -180,6 +184,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
 
     /**
      * @notice Mint rupio based on collateral provided.
+     * @notice MINTS ON HOME-CHAIN CURRENTLY BASE SEPOLIA.
      * @notice Public function.
      * @notice User needs to have a vault first.
      * @notice One rupio is issued for every ruppee of collateral(in ETH, converted to INR).
@@ -187,7 +192,10 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
      * @param amount Amount of rupio to be minted, in no decimals, example 50, should be less than CRP cross.
      * @return max Max amount of rupio that can be minted.
      */
-    function mintRupio(uint256 amount) public yesVault returns (uint256) {
+    function mintRupio(
+        uint256 amount,
+        uint32 chainEid
+    ) public yesVault returns (uint256) {
         require(
             amount > 0,
             CollateralSafeKeep__ETHAmountMustBeGreaterThanZero()
@@ -203,8 +211,29 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         //Calculate the maximum number of rupio tokens that a user can mint based on vault health.
         uint256 max = _getMaxMintableRupio(msg.sender);
         require(amount < max, "enter amount less than CRP cross");
-        //Mint rupio tokens to the user.
-        token.mint(msg.sender, amount);
+        if (chainEid == 0) {
+            //Mint rupio tokens to the user.
+            token.mint(msg.sender, amount);
+        } else {
+            token.mint(msg.sender, amount);
+            //Configure LZ options.
+            bytes memory _extraOptions = OptionsBuilder
+                .newOptions()
+                .addExecutorLzReceiveOption(65000, 0);
+            SendParam memory sendParam = SendParam(
+                chainEid, // You can also make this dynamic if needed
+                addressToBytes32(msg.sender),
+                amount,
+                (amount * 9) / 10,
+                _extraOptions,
+                "",
+                ""
+            );
+            //Quote fee.
+            MessagingFee memory fee = token.quoteSend(sendParam, false);
+            //Transfer rupio to caller address on destination chain.
+            token.send{value: fee.nativeFee}(sendParam, fee, msg.sender);
+        }
         //Update user's rupio issued and vault health in array UserVaults.
         userVaults[userIndexes[msg.sender]].rupioIssued += amount;
         userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
@@ -269,8 +298,10 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
             userVaults[userIndexes[msg.sender]].rupioIssued >= amount,
             "Less amount of rupio issued"
         );
+
         //Burn rupio tokens from user's vault.
         token.burnFrom(msg.sender, amount);
+
         //Update user's rupio issued and vault health in array UserVaults.
         userVaults[userIndexes[msg.sender]].rupioIssued -= amount;
         userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
@@ -608,5 +639,14 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
             uint256 d = _getAmountINRToETH(c);
             return d;
         }
+    }
+
+    /**
+     * @dev Converts an address to bytes32.
+     * @param _addr The address to convert.
+     * @return The bytes32 representation of the address.
+     */
+    function addressToBytes32(address _addr) internal pure returns (bytes32) {
+        return bytes32(uint256(uint160(_addr)));
     }
 }

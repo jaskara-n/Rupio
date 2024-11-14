@@ -41,6 +41,6 @@ contract Handler is Test {
         }
         _amount = bound(_amount, 1, max - 1);
         vm.prank(sender);
-        csk.mintRupio(_amount);
+        csk.mintRupio(_amount, uint32(0));
     }
 }

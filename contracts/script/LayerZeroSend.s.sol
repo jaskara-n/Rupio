@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {IOAppCore} from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppCore.sol";
 import {SendParam, OFTReceipt} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
-import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
+import {OptionsBuilder} from "../src/Libraries/OptionsBuilder.sol";
 import {MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import {Rupio} from "../src/Rupio.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
@@ -29,13 +29,10 @@ contract SendOFT is Script {
         address toAddress = 0x12B2434a1022d5787bf06056F2885Fe35De62Bf8;
         uint256 _tokensToSend = 10 * 1e18;
 
-        // Fetch the private key from environment variable
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
-
         helperconfig = new HelperConfig();
 
         // Start broadcasting with the private key
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
 
         Rupio sourceOFT = Rupio(oftAddress);
 
@@ -43,7 +40,7 @@ contract SendOFT is Script {
             .newOptions()
             .addExecutorLzReceiveOption(65000, 0);
         SendParam memory sendParam = SendParam(
-            helperconfig.getOptimismSepoliaConfig().chainEid, // You can also make this dynamic if needed
+            helperconfig.getEthSepoliaConfig().chainEid, // You can also make this dynamic if needed
             addressToBytes32(toAddress),
             _tokensToSend,
             (_tokensToSend * 9) / 10,
