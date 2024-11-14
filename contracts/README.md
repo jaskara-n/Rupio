@@ -65,6 +65,6 @@ $ anvil --help
 $ cast --help
 ```
 
-rupio base sepolia 0x62E5634044c1B823995d1f0fA5d9B7Dc3E671904
-rupio op sepolia 0x42fb975a20DCF4Ba06B0c41615dc1bd94036F6DE
+rupio base sepolia 0xC07D0290997f5053923e17B03ab871e9575E5e36
+rupio op sepolia 0xd47BDd29C984722B229141dE99C80c210de04E02
 rupio eth sepolia 0x9988fe27A32A2aE7437a868C590d4c83F1346f97
