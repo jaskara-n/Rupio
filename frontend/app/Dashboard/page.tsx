@@ -37,35 +37,41 @@ function Dashboard() {
   return (
     <div className="h-full  p-8 ">
       <div className="flex-col flex h-full justify-center items-center ">
-        <div className="bg-yellow-300 bg-opacity-10 rounded-3xl px-6 py-4 border border-[var(--secondary)]">
+        <div className="bg-gray-400 bg-opacity-10 space-y-3 rounded-3xl px-8 py-5 border border-[var(--secondary)]">
           <h1 className="mb-2">Dashboard.</h1>
+          <hr />
           <div className="space-y-4 ]">
             <div className="flex flex-row justify-between">
               <p>Vault Id: </p> {Number(vault?.vaultId.toString())}
             </div>
+            <hr />
             <div className="flex flex-row justify-between">
               <p>Locked ETH:</p>
               {(Number(vault?.balance.toString()) / 10 ** 18).toFixed(4)} ETH
             </div>
-
+            <hr />
             <div className="flex flex-row justify-between">
               <p>Locked ETH in INR: </p>
               {(Number(vault?.balanceInINR.toString()) / 10 ** 8).toFixed(
                 2
               )}{" "}
               INR
-            </div>
+            </div>{" "}
+            <hr />
             <div className="flex flex-row justify-between">
               <p> Indai Issued:</p>
               {Number(vault?.indaiIssued.toString())} IND
-            </div>
+            </div>{" "}
+            <hr />
             <div className="flex flex-row justify-between">
               <p>Vault Health:</p>{" "}
               {Number(vault?.vaultHealth.toString()).toFixed(2)}
-            </div>
+            </div>{" "}
+            <hr />
             <div className="flex flex-row justify-between">
               <p> Max Mintable INDAI:</p> {indai?.toString()} IND
-            </div>
+            </div>{" "}
+            <hr />
             <div className="flex flex-row justify-between">
               <p className="mr-8"> Max Withdrawable Collateral:</p>
               {(Number(collateral?.toString()) / 10 ** 18).toFixed(4)} ETH

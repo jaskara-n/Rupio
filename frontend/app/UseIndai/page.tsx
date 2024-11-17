@@ -26,7 +26,7 @@ function page() {
         <p>Lock Indai tokens inside the ISR contract and earn upto 7% ISR.</p>
         <button
           className="secondary mt-8"
-          onClick={() => (window.location.href = "/MintINDAI")}
+          onClick={() => (window.location.href = "/SupplyRupio")}
         >
           Supply Indai
         </button>

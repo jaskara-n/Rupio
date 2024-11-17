@@ -2,6 +2,7 @@
 import { useSpring, animated } from "@react-spring/web";
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
+import CrossTransferWidget from "@/components/crossTransferWidget";
 
 function HomePage() {
   const { isConnected } = useAccount(); // Only fetching isConnected, address removed
@@ -46,55 +47,61 @@ function HomePage() {
 
   // Only render wallet connection status after the component is mounted
   return (
-    <div className="flex flex-col justify-center items-center flex-grow h-full space-y-8 ">
-      <h1>
-        Onboarding the Next Generation of Indian DeFi to Their own&nbsp;
-        <br />
-        <span
-          style={{
-            display: "inline-block",
-            width: `${word.length}ch`,
-            whiteSpace: "nowrap",
-            textAlign: "left",
-          }}
-        >
-          {letters.slice(0, index).map((letter, i) => (
-            <animated.span
-              key={i}
-              style={{
-                color: "var(--secondary)",
-                opacity,
-                transform: x.to((x) => `translateX(${x}px)`),
-                display: "inline-block",
-              }}
-            >
-              {letter}
-            </animated.span>
+    <div className="w-full">
+      <div className="flex flex-col justify-center items-center flex-grow h-screen space-y-8 ">
+        <h1>
+          Onboarding the Next Generation of Indian DeFi to Their own&nbsp;
+          <br />
+          <span
+            style={{
+              display: "inline-block",
+              width: `${word.length}ch`,
+              whiteSpace: "nowrap",
+              textAlign: "left",
+            }}
+          >
+            {letters.slice(0, index).map((letter, i) => (
+              <animated.span
+                key={i}
+                style={{
+                  color: "var(--secondary)",
+                  opacity,
+                  transform: x.to((x) => `translateX(${x}px)`),
+                  display: "inline-block",
+                }}
+              >
+                {letter}
+              </animated.span>
+            ))}
+          </span>
+        </h1>
+        {/* Render wallet connection info only after component is mounted */}
+        {mounted &&
+          (isConnected ? (
+            <div className="flex gap-8">
+              <button
+                onClick={() => (window.location.href = "/UseIndai")}
+                className="secondary"
+              >
+                Use Indai
+              </button>
+              <button
+                onClick={() => (window.location.href = "/LockETH")}
+                className="primary"
+              >
+                Manage Vault
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-start items-center w-full">
+              <h3>Connect wallet to get started.</h3>
+            </div>
           ))}
-        </span>
-      </h1>
-      {/* Render wallet connection info only after component is mounted */}
-      {mounted &&
-        (isConnected ? (
-          <div className="flex gap-8">
-            <button
-              onClick={() => (window.location.href = "/UseIndai")}
-              className="secondary"
-            >
-              Use Indai
-            </button>
-            <button
-              onClick={() => (window.location.href = "/LockETH")}
-              className="primary"
-            >
-              Manage Vault
-            </button>
-          </div>
-        ) : (
-          <div className="flex justify-start items-center w-full">
-            <h3>Connect wallet to get started.</h3>
-          </div>
-        ))}
+      </div>
+      <div className="h-screen">
+        {" "}
+        <CrossTransferWidget />
+      </div>
     </div>
   );
 }

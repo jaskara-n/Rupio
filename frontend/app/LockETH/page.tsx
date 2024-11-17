@@ -81,7 +81,7 @@ function LockETH() {
               type="submit"
               className="ml-4 p-2 bg-red-500 text-white rounded-md"
             >
-              {isPending ? "Confirming..." : "Lock ETH"}
+              {isPending ? "Confirming..." : "Withdraw"}
             </button>
             {isConfirming && <div>Waiting for confirmation...</div>}
             {isConfirmed && <div>Transaction confirmed.</div>}
@@ -94,7 +94,7 @@ function LockETH() {
           </form>
         </div>
       </div>
-      <div className="flex flex-col justify-center items-center p-8 bg-[var(--secondary)] rounded-3xl text-black space-y-2">
+      <div className="flex flex-col justify-center items-center p-8 bg-transparent rounded-3xl text-white space-y-4 border border-white ">
         <h3>Current Vault Status</h3>
         <div className="flex flex-row justify-between w-full">
           Indai:<p>{500}</p>
@@ -103,8 +103,11 @@ function LockETH() {
         <div className="flex flex-row justify-between w-full">
           Max Mintable Indai:<p>{500}</p>
         </div>
-        <div className="flex flex-row justify-between w-full ">
-          Max Withdrawable Collateral:<p>{500}</p>
+        <div className="flex flex-row justify-between w-full  ">
+          Max Withdrawable Collateral:<p className="ml-6">{500}</p>
+        </div>
+        <div className="flex flex-row justify-between w-full  ">
+          Vault Health:<p className="ml-6">{500}</p>
         </div>
       </div>
     </div>

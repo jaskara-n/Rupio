@@ -111,6 +111,7 @@ function LockETH() {
                 className="bg-transparent"
                 name="INDAIAmount"
                 placeholder="Amount"
+                onChange={(e) => setAmount(e.target.value)}
                 required
               />
 
@@ -152,44 +153,39 @@ function LockETH() {
         </div>
 
         <div className="bg-transparent bg-opacity-10 px-8 py-6 rounded-3xl space-y-3 border-2 border-[var(--secondary)] w-[450px]">
-          <h4>Mint Indai</h4>
+          <h4>Burn Rupio</h4>
           <hr className="border-t-1 border-gray-300 my-4" />
 
-          <p className="font-bold">Already have ETH locked?</p>
+          <p className="">
+            Burn Rupio and relieve ETH collateral on base sepolia.
+          </p>
           <div className=" flex justify-between ">
-            <p>Max Mintable Indai</p>
-            <p className="font-bold">400 INDAI</p>
+            <p>Current Balance</p>
+            <p className="font-bold">300 RUP</p>
+          </div>
+          <div className=" flex justify-between ">
+            <p>Vault Health</p>
+            <p className="font-bold"> 341</p>
           </div>
           <hr className="border-t-[0.1px] border-gray-300 my-4" />
 
-          <p className="text-sm">
-            FYI: You need to have some ETH as collateral before you can mint
-            Indai.
-          </p>
           <form className="mt-4 space-y-4" onSubmit={submit}>
-            <div className="bg-gray-800 px-4 py-3 flex flex-row justify-between">
+            <div className="bg-gray-800 pl-4  flex flex-row justify-between">
               <input
                 className="bg-transparent"
                 name="INDAIAmount"
                 placeholder="Amount"
                 required
               />
-
-              <ChainDropdown onSelectChain={setSelectedChainEid} />
-            </div>
-            <div className="flex flex-row justify-between items-center">
-              <p className="text-lg">
-                {displayAmount} indai on {getChainNameByEid(selectedChainEid)}
-              </p>
               <button
                 disabled={isPending}
                 type="submit"
                 className="ml-4 p-x-3 py-2 bg-red-800 text-white rounded-xl "
               >
-                {isPending ? "Confirming..." : "Mint"}
+                {isPending ? "Confirming..." : "Burn"}
               </button>
             </div>
-            <hr className="border-t-[0.1px] border-gray-300 my-4" />
+            <div className="flex flex-row justify-between items-center"></div>
             {isConfirming && <div>Waiting for confirmation...</div>}
             {isConfirmed && <div>Transaction confirmed.</div>}
             {error && (
@@ -200,16 +196,14 @@ function LockETH() {
             {hash && <div>Transaction Hash: {hash}</div>}
           </form>
 
-          <div className="flex justify-between flex-row items-center">
-            <p className="font-bold">Else lock some ETH today!</p>
-
-            <button
-              className="primary py-2 px-4 mt-2"
-              onClick={() => (window.location.href = "/LockETH")}
-            >
-              Lock ETH
-            </button>
-          </div>
+          {isConfirming && <div>Waiting for confirmation...</div>}
+          {isConfirmed && <div>Transaction confirmed.</div>}
+          {error && (
+            <div>
+              Error: {(error as BaseError).shortMessage || error.message}
+            </div>
+          )}
+          {hash && <div>Transaction Hash: {hash}</div>}
         </div>
       </div>
     </div>

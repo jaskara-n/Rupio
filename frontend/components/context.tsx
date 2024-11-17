@@ -11,6 +11,7 @@ import {
   optimism,
   polygon,
   baseSepolia,
+  sepolia,
 } from "@reown/appkit/networks";
 import React, { type ReactNode } from "react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
@@ -43,6 +44,7 @@ createAppKit({
     optimism,
     polygon,
     baseSepolia,
+    sepolia,
   ],
   defaultNetwork: baseSepolia,
   metadata: metadata,
