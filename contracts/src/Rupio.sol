@@ -57,4 +57,8 @@ contract Rupio is Ownable, OFT {
     function burnFrom(address _add, uint256 _amount) public {
         _debit(_add, _amount, _amount - 100, chainEid);
     }
+
+    function decimals() public pure override returns (uint8) {
+        return 8;
+    }
 }

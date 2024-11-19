@@ -192,9 +192,8 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
      * @param amount Amount of rupio to be minted, in no decimals, example 50, should be less than CRP cross.
      * @return max Max amount of rupio that can be minted.
      */
-    function mintRupio(
-        uint256 amount,
-        uint32 chainEid
+    function mintRupioOnHomeChain(
+        uint256 amount
     ) public yesVault returns (uint256) {
         require(
             amount > 0,
@@ -211,35 +210,61 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         //Calculate the maximum number of rupio tokens that a user can mint based on vault health.
         uint256 max = _getMaxMintableRupio(msg.sender);
         require(amount < max, "enter amount less than CRP cross");
-        if (chainEid == 0) {
-            //Mint rupio tokens to the user.
-            token.mint(msg.sender, amount);
-        } else {
-            token.mint(msg.sender, amount);
-            //Configure LZ options.
-            bytes memory _extraOptions = OptionsBuilder
-                .newOptions()
-                .addExecutorLzReceiveOption(65000, 0);
-            SendParam memory sendParam = SendParam(
-                chainEid, // You can also make this dynamic if needed
-                addressToBytes32(msg.sender),
-                amount,
-                (amount * 9) / 10,
-                _extraOptions,
-                "",
-                ""
-            );
-            //Quote fee.
-            MessagingFee memory fee = token.quoteSend(sendParam, false);
-            //Transfer rupio to caller address on destination chain.
-            token.send{value: fee.nativeFee}(sendParam, fee, msg.sender);
-        }
+        //Mint rupio tokens to the user.
+        token.mint(msg.sender, amount);
+
         //Update user's rupio issued and vault health in array UserVaults.
         userVaults[userIndexes[msg.sender]].rupioIssued += amount;
         userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
             msg.sender
         );
         return max;
+    }
+
+    function mintRupioOnDifferentChain(
+        uint256 amount,
+        uint32 chainEid
+    ) public payable yesVault {
+        require(
+            amount > 0,
+            CollateralSafeKeep__ETHAmountMustBeGreaterThanZero()
+        );
+        //Update vault health first.
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+            msg.sender
+        );
+        require(
+            userVaults[userIndexes[msg.sender]].vaultHealth > CRP,
+            CollateralSafekeep__UserInDebt()
+        );
+        //Calculate the maximum number of rupio tokens that a user can mint based on vault health.
+        uint256 max = _getMaxMintableRupio(msg.sender);
+        require(amount < max, "enter amount less than CRP cross");
+        //Configure LZ options.
+        bytes memory _extraOptions = OptionsBuilder
+            .newOptions()
+            .addExecutorLzReceiveOption(65000, 0);
+        SendParam memory sendParam = SendParam(
+            chainEid, // You can also make this dynamic if needed
+            addressToBytes32(msg.sender),
+            amount,
+            (amount * 9) / 10,
+            _extraOptions,
+            "",
+            ""
+        );
+        //Quote fee.
+        MessagingFee memory fee = token.quoteSend(sendParam, false);
+        require(msg.value >= fee.nativeFee, "insufficient funds");
+        token.mint(address(this), amount);
+
+        //Transfer rupio to caller address on destination chain.
+        token.send{value: fee.nativeFee}(sendParam, fee, msg.sender);
+        //Update user's rupio issued and vault health in array UserVaults.
+        userVaults[userIndexes[msg.sender]].rupioIssued += amount;
+        userVaults[userIndexes[msg.sender]].vaultHealth = _getVaultHealth(
+            msg.sender
+        );
     }
 
     /**
@@ -537,7 +562,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         if (rupioIssued == 0) {
             return collateral * 100;
         } else {
-            uint256 _vaultHealth = ((collateral / (rupioIssued * 1e8)) * 100);
+            uint256 _vaultHealth = ((collateral / (rupioIssued)) * 100);
             return _vaultHealth;
         }
     }
@@ -605,7 +630,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         uint256 bal = userVaults[userIndexes[user]].balance; //amount, can say 1 token = 1 inr
         uint256 _getUserBalanceInINR = _getAmountETHToINR(bal); // in 8 decimals
         uint256 rupioIssued = userVaults[userIndexes[user]].rupioIssued; //amount, can say 1 token = 1 inr
-        uint256 totalAval = (_getUserBalanceInINR * 2) / (3 * 1e8);
+        uint256 totalAval = (_getUserBalanceInINR * 2) / (3);
         uint256 grand = totalAval - rupioIssued;
         return grand;
     }
@@ -621,7 +646,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
         uint256 collateral = userVaults[userIndexes[user]].balanceInINR;
         uint256 rupioIssued = userVaults[userIndexes[user]].rupioIssued;
         require(
-            (userVaults[userIndexes[user]].rupioIssued) * 1e8 <
+            userVaults[userIndexes[user]].rupioIssued <
                 userVaults[userIndexes[user]].balanceInINR,
             "you are in debt!"
         );
@@ -633,8 +658,7 @@ contract CollateralSafekeep is ReentrancyGuard, AutomationCompatibleInterface {
             return _getAmountINRToETH(collateral);
         } else {
             uint256 a = (rupioIssued * 3) / 2;
-            uint256 b = a * 1e8;
-            uint256 c = collateral - b;
+            uint256 c = collateral - a;
 
             uint256 d = _getAmountINRToETH(c);
             return d;

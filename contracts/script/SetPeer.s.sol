@@ -16,18 +16,18 @@ contract SetPeer is Script {
         helperconfig = new HelperConfig();
         vm.startBroadcast();
 
-        rupio = Rupio(0xE7513D67011F19DA77eE02AA4908CEdbA26ed766);
+        rupio = Rupio(0x0f16525440EefC7C1d10AF8171EC2618A7B134bb);
         // console.log(rupio.owner());
 
         // rupio.setPeer(
         //     helperconfig.getBaseSepoliaConfig().chainEid,
-        //     addressToBytes32(0xC07D0290997f5053923e17B03ab871e9575E5e36)
+        //     addressToBytes32(0x0f16525440EefC7C1d10AF8171EC2618A7B134bb)
         // );
         console.log(
             "Is-peer",
             rupio.isPeer(
-                helperconfig.getBaseSepoliaConfig().chainEid,
-                addressToBytes32(0xC07D0290997f5053923e17B03ab871e9575E5e36)
+                helperconfig.getEthSepoliaConfig().chainEid,
+                addressToBytes32(0xbb9ac7b4973eC691bE01DD4b0B7659a77A53fe23)
             )
         );
         vm.stopBroadcast();

@@ -6,7 +6,7 @@ deploy home chain:
 deploy rupio on op sepolia:
 	forge script script/DeployRupio.s.sol --rpc-url $(OP_SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast -vvv
 deploy rupio on eth sepolia:
-	forge script script/DeployRupio.s.sol --rpc-url $(ETH_SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --verifier blockscout  --verifier-url $(ETH_SEPOLIA_BLOCKSCOUT) -vvv
+	forge script script/DeployRupio.s.sol --rpc-url $(ETH_SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast  -vvv
 deploy rupio on base sepolia:
 	forge script script/DeployRupio.s.sol --rpc-url $(BASE_SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast  -vvv
 set peer on base sepolia:

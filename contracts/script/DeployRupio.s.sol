@@ -18,9 +18,9 @@ contract DeployRupio is Script {
 
         address accessManager = address(0);
         rupio = new Rupio(
-            helperconfig.getEthSepoliaConfig().lzEndpoint,
+            helperconfig.getOptimismSepoliaConfig().lzEndpoint,
             accessManager,
-            helperconfig.getEthSepoliaConfig().chainEid
+            helperconfig.getOptimismSepoliaConfig().chainEid
         );
         vm.stopBroadcast();
 
