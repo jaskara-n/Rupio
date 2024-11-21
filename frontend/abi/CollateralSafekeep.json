@@ -1,7 +1,11 @@
 [
   {
     "inputs": [
-      { "internalType": "uint256", "name": "_CIP", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "_CRP",
+        "type": "uint256"
+      },
       {
         "internalType": "uint256",
         "name": "_BASE_RISK_RATE",
@@ -17,8 +21,16 @@
         "name": "_accessManager",
         "type": "address"
       },
-      { "internalType": "address", "name": "_indai", "type": "address" },
-      { "internalType": "address", "name": "_priceContract", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "_rupio",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_priceContract",
+        "type": "address"
+      }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
@@ -33,8 +45,43 @@
     "name": "CollateralSafekeep__UpkeepNotNeeded",
     "type": "error"
   },
-  { "inputs": [], "name": "CollateralSafekeep__UserInDebt", "type": "error" },
-  { "inputs": [], "name": "ReentrancyGuardReentrantCall", "type": "error" },
+  {
+    "inputs": [],
+    "name": "CollateralSafekeep__UserInDebt",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "optionType",
+        "type": "uint16"
+      }
+    ],
+    "name": "InvalidOptionType",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "bits",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "value",
+        "type": "uint256"
+      }
+    ],
+    "name": "SafeCastOverflowedUintDowncast",
+    "type": "error"
+  },
   {
     "anonymous": false,
     "inputs": [
@@ -65,7 +112,7 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "indaiIssued",
+        "name": "rupioIssued",
         "type": "uint256"
       },
       {
@@ -81,46 +128,88 @@
   {
     "inputs": [],
     "name": "BASE_RISK_RATE",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "CIP",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "name": "CRP",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "MODERATOR_ROLE",
-    "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "RISK_PREMIUM_RATE",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
-    "name": "burnIndaiAndRelieveCollateral",
+    "name": "burnRupioAndRelieveCollateral",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }],
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
     "name": "checkUpkeep",
     "outputs": [
-      { "internalType": "bool", "name": "upkeepNeeded", "type": "bool" },
-      { "internalType": "bytes", "name": "", "type": "bytes" }
+      {
+        "internalType": "bool",
+        "name": "upkeepNeeded",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -129,70 +218,134 @@
     "inputs": [],
     "name": "createOrUpdateVault",
     "outputs": [
-      { "internalType": "uint256", "name": "vaultId", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "vaultId",
+        "type": "uint256"
+      }
     ],
     "stateMutability": "payable",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "amountINR", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "amountINR",
+        "type": "uint256"
+      }
     ],
     "name": "getAmountINRToETH",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "getBASE_RISK_RATE",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getCIP",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "name": "getCRP",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "getCurrentVaultId",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "address", "name": "user", "type": "address" }
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
     ],
-    "name": "getMaxMintableIndai",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "user", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getMaxMintableRupio",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
     ],
     "name": "getMaxWithdrawableCollateral",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "getRISK_PREMIUM_RATE",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "getTotalCollateralPrice",
-    "outputs": [{ "internalType": "int256", "name": "", "type": "int256" }],
+    "outputs": [
+      {
+        "internalType": "int256",
+        "name": "",
+        "type": "int256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
@@ -202,13 +355,21 @@
     "outputs": [
       {
         "components": [
-          { "internalType": "uint256", "name": "vaultId", "type": "uint256" },
+          {
+            "internalType": "uint256",
+            "name": "vaultId",
+            "type": "uint256"
+          },
           {
             "internalType": "address",
             "name": "userAddress",
             "type": "address"
           },
-          { "internalType": "uint256", "name": "balance", "type": "uint256" },
+          {
+            "internalType": "uint256",
+            "name": "balance",
+            "type": "uint256"
+          },
           {
             "internalType": "uint256",
             "name": "balanceInINR",
@@ -216,7 +377,7 @@
           },
           {
             "internalType": "uint256",
-            "name": "indaiIssued",
+            "name": "rupioIssued",
             "type": "uint256"
           },
           {
@@ -235,19 +396,39 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "_address", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "_address",
+        "type": "address"
+      }
     ],
     "name": "getUserBalanceInINR",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "_address", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "_address",
+        "type": "address"
+      }
     ],
     "name": "getUserCollateralBalance",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
@@ -257,13 +438,21 @@
     "outputs": [
       {
         "components": [
-          { "internalType": "uint256", "name": "vaultId", "type": "uint256" },
+          {
+            "internalType": "uint256",
+            "name": "vaultId",
+            "type": "uint256"
+          },
           {
             "internalType": "address",
             "name": "userAddress",
             "type": "address"
           },
-          { "internalType": "uint256", "name": "balance", "type": "uint256" },
+          {
+            "internalType": "uint256",
+            "name": "balance",
+            "type": "uint256"
+          },
           {
             "internalType": "uint256",
             "name": "balanceInINR",
@@ -271,7 +460,7 @@
           },
           {
             "internalType": "uint256",
-            "name": "indaiIssued",
+            "name": "rupioIssued",
             "type": "uint256"
           },
           {
@@ -290,16 +479,30 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "_user", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
     ],
     "name": "getVaultHealth",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "_vaultAddress", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "_vaultAddress",
+        "type": "address"
+      }
     ],
     "name": "liquidateVault",
     "outputs": [],
@@ -308,15 +511,49 @@
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "chainEid",
+        "type": "uint32"
+      }
     ],
-    "name": "mintIndai",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "name": "mintRupioOnDifferentChain",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "mintRupioOnHomeChain",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }],
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
     "name": "performUpkeep",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -330,15 +567,31 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "userIndexes",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
     "name": "withdrawFromVault",
     "outputs": [],

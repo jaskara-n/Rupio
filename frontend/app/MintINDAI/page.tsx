@@ -3,19 +3,23 @@ import {
   type BaseError,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useReadContract,
+  useAccount,
 } from "wagmi";
+
 import React, { useState } from "react";
 import CollateralSafekeep from "@/abi/CollateralSafekeep.json";
+import { parseEther } from "viem";
 
 const csk = {
-  address: "0x5F0f545F044628b8DF84F1933887eC6aa9E9449D",
+  address: "0x2F15F0B2492694d65824C71aa41DDc848cb47614",
   abi: CollateralSafekeep,
 } as const;
 
 const chains = [
-  { name: "Optimism Sepolia", logo: "/borrow.png", eid: 1234 },
-  { name: "Ethereum Sepolia", logo: "/borrow.png", eid: 5678 },
-  { name: "Base Sepolia", logo: "/borrow.png", eid: 91011 },
+  { name: "Optimism Sepolia", logo: "/borrow.png", eid: 40232 },
+  { name: "Ethereum Sepolia", logo: "/borrow.png", eid: 40161 },
+  { name: "Base Sepolia", logo: "/borrow.png", eid: 0 },
 ];
 
 // Dropdown Component with TypeScript
@@ -65,7 +69,7 @@ function LockETH() {
   const [selectedChainEid, setSelectedChainEid] = useState<number | null>(null);
   const [amount, setAmount] = useState("");
 
-  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const mint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const INDAIAmount = formData.get("INDAIAmount") as string;
@@ -73,19 +77,58 @@ function LockETH() {
     if (selectedChainEid === null) {
       alert("Please select a chain.");
       return;
+    } else if (selectedChainEid == 0) {
+      try {
+        await writeContract({
+          ...csk,
+          functionName: "mintRupioOnHomeChain",
+          account: address,
+          args: [BigInt(INDAIAmount)],
+        });
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    } else {
+      try {
+        await writeContract({
+          ...csk,
+          functionName: "mintRupioOnDifferentChain",
+          value: parseEther("0.001"),
+          args: [BigInt(INDAIAmount), BigInt(selectedChainEid)],
+        });
+      } catch (error) {
+        console.error("Error:", error);
+      }
     }
+  };
+  const burn = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const INDAIAmount = formData.get("INDAIAmount") as string;
+    setAmount(INDAIAmount);
 
     try {
       await writeContract({
         ...csk,
-        functionName: "mintIndai",
-        args: [BigInt(INDAIAmount), selectedChainEid],
+        functionName: "burnRupioAndRelieveCollateral",
+        args: [BigInt(INDAIAmount)],
       });
     } catch (error) {
       console.error("Error:", error);
     }
   };
   const displayAmount = amount ? amount : "0";
+  const { address } = useAccount();
+  const { data: maxMintableRupio }: any = useReadContract({
+    ...csk,
+    functionName: "getMaxMintableRupio",
+    args: [address],
+  });
+  const { data: vault }: any = useReadContract({
+    ...csk,
+    functionName: "getVaultDetailsForTheUser",
+    account: address,
+  });
 
   return (
     <div className="h-full p-10 flex flex-col items-center justify-center">
@@ -97,7 +140,9 @@ function LockETH() {
           <p className="font-bold">Already have ETH locked?</p>
           <div className=" flex justify-between ">
             <p>Max Mintable Indai</p>
-            <p className="font-bold">400 INDAI</p>
+            <p className="font-bold">
+              {(Number(maxMintableRupio?.toString()) / 10 ** 8).toFixed(2)} RUP
+            </p>
           </div>
           <hr className="border-t-[0.1px] border-gray-300 my-4" />
 
@@ -105,7 +150,7 @@ function LockETH() {
             FYI: You need to have some ETH as collateral before you can mint
             Indai.
           </p>
-          <form className="mt-4 space-y-4" onSubmit={submit}>
+          <form className="mt-4 space-y-4" onSubmit={mint}>
             <div className="bg-gray-800 px-4 py-3 flex flex-row justify-between">
               <input
                 className="bg-transparent"
@@ -161,15 +206,21 @@ function LockETH() {
           </p>
           <div className=" flex justify-between ">
             <p>Current Balance</p>
-            <p className="font-bold">300 RUP</p>
+            <p className="font-bold">
+              {" "}
+              {(Number(vault?.rupioIssued.toString()) / 10 ** 8).toFixed(2)} RUP
+            </p>
           </div>
           <div className=" flex justify-between ">
             <p>Vault Health</p>
-            <p className="font-bold"> 341</p>
+            <p className="font-bold">
+              {" "}
+              {Number(vault?.vaultHealth.toString()).toFixed(2)}
+            </p>
           </div>
           <hr className="border-t-[0.1px] border-gray-300 my-4" />
 
-          <form className="mt-4 space-y-4" onSubmit={submit}>
+          <form className="mt-4 space-y-4" onSubmit={burn}>
             <div className="bg-gray-800 pl-4  flex flex-row justify-between">
               <input
                 className="bg-transparent"

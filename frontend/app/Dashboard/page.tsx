@@ -8,7 +8,7 @@ function Dashboard() {
   const { address } = useAccount();
 
   const csk = {
-    address: "0x5f0f545f044628b8df84f1933887ec6aa9e9449d",
+    address: "0x2F15F0B2492694d65824C71aa41DDc848cb47614",
     abi: CollateralSafekeep,
   } as const;
   // const csk = {
@@ -18,7 +18,7 @@ function Dashboard() {
 
   const { data: indai } = useReadContract({
     ...csk,
-    functionName: "getMaxMintableIndai",
+    functionName: "getMaxMintableRupio",
     args: [address],
   });
 
@@ -60,7 +60,7 @@ function Dashboard() {
             <hr />
             <div className="flex flex-row justify-between">
               <p> Indai Issued:</p>
-              {Number(vault?.indaiIssued.toString())} IND
+              {(Number(vault?.rupioIssued.toString()) / 10 ** 8).toFixed(2)} RUP
             </div>{" "}
             <hr />
             <div className="flex flex-row justify-between">
@@ -69,7 +69,8 @@ function Dashboard() {
             </div>{" "}
             <hr />
             <div className="flex flex-row justify-between">
-              <p> Max Mintable INDAI:</p> {indai?.toString()} IND
+              <p> Max Mintable INDAI:</p>{" "}
+              {(Number(indai?.toString()) / 10 ** 8).toFixed(2)} RUP
             </div>{" "}
             <hr />
             <div className="flex flex-row justify-between">
