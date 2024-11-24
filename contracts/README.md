@@ -50,16 +50,16 @@
 
 ### Base Sepolia
 
-- price feed mock
-  https://base-sepolia.blockscout.com/address/0x06CfD9ef2f5B454591563Ee18aB1781E15278b22
+- PriceFeedMock
+  https://base-sepolia.blockscout.com/address/0xC038798eAF9f3eCd73AC5C6A5e7AF8ED2483553B
 - AccessManager.sol
-  https://base-sepolia.blockscout.com/address/0x7A2198D87fFbF40f40A63Bf975D4CCF9da5bC0D7?tab=contract
+  https://base-sepolia.blockscout.com/address/0x1cc5e98a5222891e0ba2e29abcb6f95fe8f41dc9
 - Rupio.sol
-  https://base-sepolia.blockscout.com/token/0x0f16525440EefC7C1d10AF8171EC2618A7B134bb
+  https://base-sepolia.blockscout.com/token/0x9BD90ac5435a793333C2F1e59A6e7e5dBAd0AFEa
 - PriceFeed.sol 
-  https://base-sepolia.blockscout.com/address/0x34e101d3d7945F823559436c5cbcFDe44d7e87C4?tab=contract
+  https://base-sepolia.blockscout.com/address/0x3f0ca799102e648cfceb4830fb5401421d145f44
 - CollateralSafekeep.sol
-  https://base-sepolia.blockscout.com/address/0x27261581608B1fa22d68c55a70D975A4897F64EE
+  https://base-sepolia.blockscout.com/address/0x2F15F0B2492694d65824C71aa41DDc848cb47614
 
 ### Other Testnets
 
