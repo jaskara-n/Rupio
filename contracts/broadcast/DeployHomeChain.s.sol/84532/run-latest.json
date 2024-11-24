@@ -6,10 +6,7 @@
       "contractName": "MockV3Aggregator",
       "contractAddress": "0xc038798eaf9f3ecd73ac5c6a5e7af8ed2483553b",
       "function": null,
-      "arguments": [
-        "8",
-        "1200000"
-      ],
+      "arguments": ["8", "1200000"],
       "transaction": {
         "from": "0x12b2434a1022d5787bf06056f2885fe35de62bf8",
         "gas": "0x8d9ff",

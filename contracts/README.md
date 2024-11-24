@@ -56,7 +56,7 @@
   https://base-sepolia.blockscout.com/address/0x1cc5e98a5222891e0ba2e29abcb6f95fe8f41dc9
 - Rupio.sol
   https://base-sepolia.blockscout.com/token/0x9BD90ac5435a793333C2F1e59A6e7e5dBAd0AFEa
-- PriceFeed.sol 
+- PriceFeed.sol
   https://base-sepolia.blockscout.com/address/0x3f0ca799102e648cfceb4830fb5401421d145f44
 - CollateralSafekeep.sol
   https://base-sepolia.blockscout.com/address/0x2F15F0B2492694d65824C71aa41DDc848cb47614
@@ -65,6 +65,26 @@
 
 rupio op sepolia 0xDDd2e2A0434cb9B11bC778908bc9335f616f6362
 rupio eth sepolia 0xbb9ac7b4973eC691bE01DD4b0B7659a77A53fe23
+
+## Frameworks and Tools used
+
+- Foundry : For testing and deployment
+- Chainlink Automation : For periodically updating vault health of all vaults.
+- Chainlink Pricefeeds : For providing price rates from oracles
+- LayerZero : For making Rupio token cross-chain compatible
+- OpenZeppelin : Used in governance contract, and allover the system for ownable, time-locks and such
+
+## Local Cloning Instructions
+
+### Clone the repository and forge install
+
+```
+git clone https://github.com/jaskara-n/Rupio.git
+```
+
+```
+forge install
+```
 
 ## Foundry
 
