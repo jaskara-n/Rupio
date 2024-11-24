@@ -95,6 +95,12 @@ ETH_SEPOLIA_RPC_URL=""
 PRIVATE_KEY=""
 ```
 
+### Check Makefile, and Explore!
+
+```
+//feel free to run some forge tests, on local as well as forks, run scripts to deploy the dynamite!
+```
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
