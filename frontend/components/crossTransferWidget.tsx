@@ -1,6 +1,40 @@
 "use client";
 import React, { useState } from "react";
 import { useSwitchChain } from "wagmi";
+import { addressToBytes32 } from "@layerzerolabs/lz-v2-utilities";
+import { Options } from "@layerzerolabs/lz-v2-utilities";
+import { BigNumberish, BytesLike, parseEther } from "ethers";
+import Rupio from "@/abi/Rupio.json";
+import {
+  type BaseError,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useAccount,
+} from "wagmi";
+
+interface SendParam {
+  dstEid: BigNumberish;
+  to: BytesLike;
+  amountLD: BigNumberish;
+  minAmountLD: BigNumberish;
+  extraOptions: BytesLike;
+  composeMsg: BytesLike;
+  oftCmd: BytesLike;
+}
+
+interface ChainConfig {
+  chainEid: number;
+  contractAddress: string;
+}
+
+interface ChainsMap {
+  [key: number]: ChainConfig;
+}
+
+const chainConfigs: ChainsMap = {
+  11155111: { chainEid: 1001, contractAddress: "0xBaseSepoliaContract" }, // Base Sepolia example
+  // Add more chains as needed
+};
 
 function CrossTransferWidget() {
   const { chains, switchChain } = useSwitchChain();
@@ -10,6 +44,18 @@ function CrossTransferWidget() {
     null
   );
   const [selectedToChain, setSelectedToChain] = useState<number | null>(null);
+
+  const rup = {
+    address: "0x9BD90ac5435a793333C2F1e59A6e7e5dBAd0AFEa",
+    abi: Rupio,
+  } as const;
+
+  const { data: hash, isPending, writeContract, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+  const { address } = useAccount();
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRupioAmount(event.target.value);
@@ -30,6 +76,60 @@ function CrossTransferWidget() {
 
   const handleToChainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedToChain(parseInt(event.target.value));
+  };
+
+  const handleTransact = async () => {
+    if (
+      selectedFromChain &&
+      selectedToChain &&
+      rupioAmount &&
+      recipientAddress
+    ) {
+      const fromConfig = chainConfigs[selectedFromChain];
+      const toConfig = chainConfigs[selectedToChain];
+
+      // if (!fromConfig || !toConfig) {
+      //   console.error("Invalid chain configuration");
+      //   alert("Invalid chain configuration");
+      //   return;
+      // }
+
+      const options = Options.newOptions()
+        .addExecutorLzReceiveOption(65000, 0)
+        .toBytes();
+
+      const sendParam: SendParam = {
+        dstEid: toConfig.chainEid,
+        to: addressToBytes32(recipientAddress),
+        amountLD: rupioAmount,
+        minAmountLD: rupioAmount,
+        extraOptions: options,
+        composeMsg: "", // Assuming no composed message
+        oftCmd: "", // Assuming no OFT command is needed
+      };
+
+      console.log("Transaction Details:", {
+        fromChain: fromConfig,
+        toChain: toConfig,
+        sendParam,
+      });
+
+      try {
+        writeContract({
+          ...rup,
+          functionName: "send",
+          account: address,
+          value: parseEther("0.001"), // Ensure gas is sufficient
+          args: [sendParam, parseEther("0.001"), address],
+        });
+      } catch (err) {
+        console.error("Transaction failed:", err);
+        alert(`Transaction failed: ${err?.toString() || "Unknown error"}`);
+      }
+    } else {
+      console.error("Missing fields for transaction");
+      alert("Please fill all fields before transacting.");
+    }
   };
 
   return (
@@ -68,17 +168,17 @@ function CrossTransferWidget() {
         </div>
         <div>
           <h3>To</h3>
-          <div className="flex flex-row border border-white rounded-xl px-5 py-4  ">
+          <div className="flex flex-row border border-white rounded-xl px-5 py-4">
             <input
               type="text"
               value={recipientAddress}
               onChange={handleAddressChange}
               placeholder="Recipient Address"
-              className="bg-transparent placeholder-white rounded-xl text-white flex-grow focus:outline-none focus:ring-0 "
+              className="bg-transparent placeholder-white rounded-xl text-white flex-grow focus:outline-none focus:ring-0"
             />
             <div className="relative w-40 overflow-hidden mt-3">
               <select
-                className="w-full p-2 border border-dotted rounded-xl bg-transparent focus:outline-none focus:ring-0 appearance-none box-border "
+                className="w-full p-2 border border-dotted rounded-xl bg-transparent focus:outline-none focus:ring-0 appearance-none box-border"
                 value={selectedToChain || ""}
                 onChange={handleToChainChange}
               >
@@ -91,11 +191,22 @@ function CrossTransferWidget() {
               </select>
               <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
                 ▼
-              </span>{" "}
+              </span>
             </div>
           </div>
         </div>
-        <button className="secondary w-full "> Transact</button>
+        <button
+          className="secondary w-full"
+          onClick={handleTransact}
+          disabled={
+            !selectedFromChain ||
+            !selectedToChain ||
+            !rupioAmount ||
+            !recipientAddress
+          }
+        >
+          Transact
+        </button>
       </div>
     </div>
   );
