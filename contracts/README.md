@@ -86,6 +86,15 @@ git clone https://github.com/jaskara-n/Rupio.git
 forge install
 ```
 
+### Add .env file
+
+```env
+BASE_SEPOLIA_RPC_URL=""
+OP_SEPOLIA_RPC_URL=""
+ETH_SEPOLIA_RPC_URL=""
+PRIVATE_KEY=""
+```
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
