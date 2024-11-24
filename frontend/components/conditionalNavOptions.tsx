@@ -40,7 +40,7 @@ function ConditionalNavOptions() {
                   onClick={closeSidebar}
                   className="text-xl font-bold text-black"
                 >
-                  Indai Stablecoin.
+                  RupioDao.
                 </Link>
               </div>
               <div className="text-black text-4xl  flex flex-col p-32 space-y-6">
@@ -50,8 +50,8 @@ function ConditionalNavOptions() {
                 <Link onClick={closeSidebar} href="/LockETH">
                   Create or Update Vault
                 </Link>
-                <Link onClick={closeSidebar} href="/MintINDAI">
-                  Mint some Indai
+                <Link onClick={closeSidebar} href="/MintRupio">
+                  Mint some Rupio
                 </Link>
               </div>
             </div>

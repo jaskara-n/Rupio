@@ -5,12 +5,7 @@ import { addressToBytes32 } from "@layerzerolabs/lz-v2-utilities";
 import { Options } from "@layerzerolabs/lz-v2-utilities";
 import { BigNumberish, BytesLike, parseEther } from "ethers";
 import Rupio from "@/abi/Rupio.json";
-import {
-  type BaseError,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useAccount,
-} from "wagmi";
+import { useWriteContract, useAccount } from "wagmi";
 
 interface SendParam {
   dstEid: BigNumberish;
@@ -50,11 +45,8 @@ function CrossTransferWidget() {
     abi: Rupio,
   } as const;
 
-  const { data: hash, isPending, writeContract, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
+  const { writeContract } = useWriteContract();
+
   const { address } = useAccount();
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {

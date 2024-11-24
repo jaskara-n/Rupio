@@ -134,12 +134,12 @@ function LockETH() {
     <div className="h-full p-10 flex flex-col items-center justify-center">
       <div className="flex flex-row gap-10">
         <div className="bg-transparent bg-opacity-10 px-8 py-6 rounded-3xl space-y-3 border-2 border-[var(--secondary)] w-[450px]">
-          <h4>Mint Indai</h4>
+          <h4>Mint Rupio</h4>
           <hr className="border-t-1 border-gray-300 my-4" />
 
           <p className="font-bold">Already have ETH locked?</p>
           <div className=" flex justify-between ">
-            <p>Max Mintable Indai</p>
+            <p>Max Mintable Rupio</p>
             <p className="font-bold">
               {(Number(maxMintableRupio?.toString()) / 10 ** 8).toFixed(2)} RUP
             </p>
@@ -148,7 +148,7 @@ function LockETH() {
 
           <p className="text-sm">
             FYI: You need to have some ETH as collateral before you can mint
-            Indai.
+            Rupio.
           </p>
           <form className="mt-4 space-y-4" onSubmit={mint}>
             <div className="bg-gray-800 px-4 py-3 flex flex-row justify-between">
@@ -164,7 +164,7 @@ function LockETH() {
             </div>
             <div className="flex flex-row justify-between items-center">
               <p className="text-lg">
-                {displayAmount} indai on {getChainNameByEid(selectedChainEid)}
+                {displayAmount} Rupio on {getChainNameByEid(selectedChainEid)}
               </p>
               <button
                 disabled={isPending}

@@ -9,7 +9,7 @@ import { headers } from "next/headers"; // added
 import ContextProvider from "@/components/context";
 
 export const metadata: Metadata = {
-  title: "Indai Stablecoin",
+  title: "Rupio Stablecoin",
   description: "Stablecoin pegged to INR",
 };
 

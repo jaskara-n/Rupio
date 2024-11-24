@@ -8,7 +8,7 @@ function Navbar() {
         {" "}
         <ConditionalNavOptions />
         <Link href={"/"} className="text-xl font-bold">
-          Indai Stablecoin.
+          RupioDao.
         </Link>
       </div>
 

@@ -59,7 +59,7 @@ function Dashboard() {
             </div>{" "}
             <hr />
             <div className="flex flex-row justify-between">
-              <p> Indai Issued:</p>
+              <p> Rupio Issued:</p>
               {(Number(vault?.rupioIssued.toString()) / 10 ** 8).toFixed(2)} RUP
             </div>{" "}
             <hr />
@@ -69,7 +69,7 @@ function Dashboard() {
             </div>{" "}
             <hr />
             <div className="flex flex-row justify-between">
-              <p> Max Mintable INDAI:</p>{" "}
+              <p> Max Mintable Rupio:</p>{" "}
               {(Number(indai?.toString()) / 10 ** 8).toFixed(2)} RUP
             </div>{" "}
             <hr />

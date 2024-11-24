@@ -80,10 +80,10 @@ function HomePage() {
           (isConnected ? (
             <div className="flex gap-8">
               <button
-                onClick={() => (window.location.href = "/UseIndai")}
+                onClick={() => (window.location.href = "/UseRupio")}
                 className="secondary"
               >
-                Use Indai
+                Use Rupio
               </button>
               <button
                 onClick={() => (window.location.href = "/LockETH")}
@@ -93,7 +93,7 @@ function HomePage() {
               </button>
             </div>
           ) : (
-            <div className="flex justify-start items-center w-full">
+            <div className="flex justify-center items-center w-full">
               <h3>Connect wallet to get started.</h3>
             </div>
           ))}

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  type BaseError,
   useWriteContract,
   useWaitForTransactionReceipt,
   useAccount,
@@ -14,12 +13,11 @@ import { useState } from "react";
 function LockETH() {
   const [popup, setPopup] = useState(false);
   const [txHash, setTxHash] = useState("");
-  const { data: hash, isPending, writeContract, error } = useWriteContract();
+  const { data: hash, isPending, writeContract } = useWriteContract();
   const { address } = useAccount();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
+  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
 
   const csk = {
     address: "0x2F15F0B2492694d65824C71aa41DDc848cb47614",
@@ -47,7 +45,7 @@ function LockETH() {
       account: address,
       value: parseEther(ETHAmount),
     });
-
+    console.log(tx);
     if (isConfirmed) {
       setTxHash(hash?.toString() || "");
       setPopup(true);
@@ -67,6 +65,7 @@ function LockETH() {
     });
     // setTxHash(tx?.hash);
     // setPopup(true);
+    console.log(tx);
   }
 
   return (
