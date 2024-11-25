@@ -100,6 +100,9 @@ PRIVATE_KEY=""
 ```
 //feel free to run some forge tests, on local as well as forks, run scripts to deploy the dynamite!
 ```
+## Forge Coverage
+<img width="801" alt="Screenshot 2024-11-25 at 1 12 54 PM" src="https://github.com/user-attachments/assets/455ca8c4-b019-40e1-a27d-9f031cb11e69">
+- Main contracts are thoroughly tested, including fuzz tests.
 
 ## Foundry
 
